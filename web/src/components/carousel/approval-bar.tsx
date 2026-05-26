@@ -55,10 +55,10 @@ export function ApprovalBar({
   }
 
   return (
-    <div className="rounded-2xl glass p-5">
-      <div className="flex items-start gap-3">
-        <Send className="mt-1 h-4 w-4 text-primary" />
-        <div className="flex-1">
+    <div className="rounded-2xl glass p-5 min-w-0">
+      <div className="flex items-start gap-3 min-w-0">
+        <Send className="mt-1 h-4 w-4 text-primary shrink-0" />
+        <div className="flex-1 min-w-0">
           <h3 className="text-sm font-semibold uppercase tracking-[0.14em] text-muted-foreground">
             Approve & publish
           </h3>
@@ -66,8 +66,9 @@ export function ApprovalBar({
             Approve to queue this carousel. Optionally pick a publish time, or
             leave blank for the next open slot.
           </p>
-          <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-end">
-            <div className="flex-1 space-y-1.5">
+          {/* Stack vertically — the aside column is narrow; horizontal layout overflows. */}
+          <div className="mt-4 flex flex-col gap-3">
+            <div className="space-y-1.5 min-w-0">
               <Label htmlFor="publishAt">Publish at</Label>
               <Input
                 id="publishAt"
@@ -75,15 +76,22 @@ export function ApprovalBar({
                 value={publishAt}
                 onChange={(e) => setPublishAt(e.target.value)}
                 disabled={pending}
+                className="w-full"
               />
             </div>
-            <Button onClick={approve} disabled={pending} variant="primary" size="lg">
+            <Button
+              onClick={approve}
+              disabled={pending}
+              variant="primary"
+              size="lg"
+              className="w-full justify-center"
+            >
               {pending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
               {publishAt ? 'Schedule' : 'Approve now'}
             </Button>
           </div>
-          {done && <p className="mt-3 text-sm text-emerald-300">✓ {done}</p>}
-          {err && <p className="mt-3 text-sm text-red-300">{err}</p>}
+          {done && <p className="mt-3 text-sm text-emerald-300 break-words">✓ {done}</p>}
+          {err && <p className="mt-3 text-sm text-red-300 break-words">{err}</p>}
         </div>
       </div>
     </div>

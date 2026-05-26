@@ -27,7 +27,8 @@ export default async function CarouselPage({
   if (!carousel) notFound();
 
   return (
-    <div className="space-y-8">
+    // `min-w-0` lets the children shrink instead of forcing the parent to grow.
+    <div className="space-y-8 min-w-0">
       <Button variant="ghost" size="sm" asChild className="-ml-2 self-start">
         <Link href="/library">
           <ArrowLeft className="h-3.5 w-3.5" /> Back to library
@@ -37,7 +38,7 @@ export default async function CarouselPage({
       <PageHeader
         eyebrow={`Carousel · ${fmtRelative(carousel.created_at)}`}
         title={
-          <span className="gradient-text">
+          <span className="gradient-text break-words">
             {carousel.title ?? 'Untitled carousel'}
           </span>
         }
@@ -51,7 +52,7 @@ export default async function CarouselPage({
 
       <SlideStrip slides={carousel.slides ?? []} />
 
-      <div className="grid gap-6 lg:grid-cols-3">
+      <div className="grid gap-6 lg:grid-cols-3 min-w-0">
         <section className="space-y-3 lg:col-span-2">
           <h2 className="text-sm font-semibold uppercase tracking-[0.14em] text-muted-foreground">
             Caption

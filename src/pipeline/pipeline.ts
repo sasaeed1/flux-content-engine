@@ -238,15 +238,38 @@ export async function runPipeline(options: PipelineOptions): Promise<PipelineRes
       return rendered.length;
     });
 
-    /* ---------- approval gate (manual mode) ---------- */
+    /* ---------- approval gate (manual mode OR no IG account) ---------- */
+    // If the caller asked for manual approval OR the org has no IG account
+    // configured yet, we stop at "produced content" and let the user approve
+    // from the dashboard. This way fresh workspaces don't see false failures.
     const approvalMode = options.approvalMode ?? 'auto';
-    if (approvalMode === 'manual') {
+    let account: Awaited<ReturnType<typeof resolveInstagramAccount>> | null = null;
+    let igAccountMissing = false;
+    if (approvalMode === 'auto') {
+      try {
+        account = await resolveInstagramAccount(org.id);
+      } catch (e) {
+        const msg = toErrorMessage(e);
+        if (/no instagram account|instagram account configured/i.test(msg)) {
+          igAccountMissing = true;
+          log.warn({ orgId: org.id }, 'No IG account — falling back to manual approval');
+        } else {
+          throw e;
+        }
+      }
+    }
+
+    if (approvalMode === 'manual' || igAccountMissing) {
       await markTopicGenerated(topic, 'manual');
       await updateRun(run.id, {
         status: 'completed',
         current_step: 'enqueue',
         finished_at: nowIso(),
-        metadata: { ...(run.metadata as object), approvalGated: true },
+        metadata: {
+          ...(run.metadata as object),
+          approvalGated: true,
+          ...(igAccountMissing ? { igAccountMissing: true } : {}),
+        },
       });
       log.info({ topic: topic.topic }, 'Pipeline produced content — awaiting manual approval');
       return {
@@ -261,7 +284,9 @@ export async function runPipeline(options: PipelineOptions): Promise<PipelineRes
     }
 
     /* ---------- enqueue publish ---------- */
-    const account = await resolveInstagramAccount(org.id);
+    if (!account) {
+      account = await resolveInstagramAccount(org.id);
+    }
     const caption = buildFinalCaption(
       (carouselContent?.caption ?? singleContent?.caption ?? '') as string,
       (carouselContent?.hashtags ?? singleContent?.hashtags ?? []) as string[],

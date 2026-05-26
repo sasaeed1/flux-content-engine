@@ -35,6 +35,7 @@ export function CarouselGridCard({ row }: { row: CarouselRow }) {
             fill
             sizes="(max-width: 768px) 50vw, (max-width: 1280px) 33vw, 25vw"
             className="object-cover transition-transform duration-500 group-hover:scale-[1.03]"
+            unoptimized
           />
         ) : (
           <div className="flex h-full w-full items-center justify-center pattern-dots">
