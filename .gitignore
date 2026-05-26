@@ -21,3 +21,5 @@ web/node_modules/
 # Local
 *.pid
 puppeteer-cache/
+---
+web/tsconfig.tsbuildinfo
