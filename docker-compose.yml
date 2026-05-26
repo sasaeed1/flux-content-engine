@@ -1,0 +1,57 @@
+# ============================================================
+#  Content Engine — Docker Compose
+#  Services:
+#    app  -> Node/TypeScript content engine API + workers (port 8090)
+#    n8n  -> orchestration plane (port 5678)
+#  Supabase is a managed cloud service.
+#  WappFlow runs in its own compose at its own port; this is a sibling.
+# ============================================================
+version: "3.9"
+
+services:
+  app:
+    build: .
+    image: content-engine:latest
+    container_name: content-engine-app
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      - NODE_ENV=production
+    ports:
+      - "8090:8090"
+    volumes:
+      - ./tmp:/app/tmp
+    networks:
+      - content-engine
+
+  n8n:
+    image: n8nio/n8n:latest
+    container_name: content-engine-n8n
+    restart: unless-stopped
+    ports:
+      - "5679:5678" # 5679 on host to avoid collisions with WappFlow's n8n
+    environment:
+      - N8N_HOST=${N8N_HOST:-localhost}
+      - N8N_PORT=5678
+      - N8N_PROTOCOL=${N8N_PROTOCOL:-http}
+      - WEBHOOK_URL=${N8N_WEBHOOK_URL:-http://localhost:5679/}
+      - GENERIC_TIMEZONE=${TZ:-UTC}
+      - N8N_BASIC_AUTH_ACTIVE=true
+      - N8N_BASIC_AUTH_USER=${N8N_BASIC_AUTH_USER:-admin}
+      - N8N_BASIC_AUTH_PASSWORD=${N8N_BASIC_AUTH_PASSWORD:-change-me}
+      - N8N_RUNNERS_ENABLED=true
+      - CONTENT_ENGINE_URL=http://app:8090
+      - CONTENT_ENGINE_API_KEY=${INTERNAL_API_KEY}
+    volumes:
+      - n8n_data:/home/node/.n8n
+    depends_on:
+      - app
+    networks:
+      - content-engine
+
+networks:
+  content-engine:
+    driver: bridge
+
+volumes:
+  n8n_data:

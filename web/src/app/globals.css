@@ -1,0 +1,127 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ------------------------------------------------------------------
+ *  Flux design tokens — dark mode is the only mode.
+ * ------------------------------------------------------------------ */
+@layer base {
+  :root {
+    --background: 230 26% 4%;          /* near-black, slight cool tint  #08090C */
+    --foreground: 220 14% 96%;
+    --card: 230 24% 7%;
+    --card-foreground: 220 14% 96%;
+    --muted: 230 14% 12%;
+    --muted-foreground: 220 6% 64%;
+    --primary: 188 95% 53%;            /* Flux cyan #22D3EE */
+    --primary-foreground: 230 26% 4%;
+    --accent: 263 82% 76%;              /* Flux violet #A78BFA */
+    --accent-foreground: 230 26% 4%;
+    --secondary: 230 16% 10%;
+    --secondary-foreground: 220 14% 96%;
+    --destructive: 0 75% 60%;
+    --destructive-foreground: 220 14% 96%;
+    --border: 230 16% 14%;
+    --input: 230 18% 11%;
+    --ring: 188 95% 53%;
+    --radius: 0.85rem;
+  }
+
+  * { border-color: hsl(var(--border)); }
+
+  html, body { height: 100%; }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-feature-settings: "cv11", "ss01", "ss03";
+    background-image:
+      radial-gradient(900px 700px at 10% -10%, hsla(263, 90%, 70%, 0.10), transparent 60%),
+      radial-gradient(1000px 800px at 110% 0%, hsla(188, 95%, 53%, 0.08), transparent 60%),
+      radial-gradient(700px 500px at 90% 100%, hsla(322, 90%, 60%, 0.06), transparent 60%);
+    background-attachment: fixed;
+    min-height: 100dvh;
+  }
+
+  /* Subtle film-grain noise overlay — fixed, non-interactive */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 1;
+    opacity: 0.035;
+    mix-blend-mode: overlay;
+    background-image:
+      url("data:image/svg+xml;utf8,<svg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1, 0 0 0 0 1, 0 0 0 0 1, 0 0 0 0.6 0'/></filter><rect width='200' height='200' filter='url(%23n)'/></svg>");
+  }
+}
+
+/* ------------------------------------------------------------------
+ *  Reusable utilities
+ * ------------------------------------------------------------------ */
+@layer utilities {
+  .glass {
+    background:
+      linear-gradient(180deg, hsla(230, 22%, 12%, 0.55), hsla(230, 26%, 7%, 0.55));
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    border: 1px solid hsla(220, 14%, 96%, 0.06);
+  }
+  .glass-hover {
+    transition: border-color 200ms ease, transform 200ms ease, box-shadow 200ms ease;
+  }
+  .glass-hover:hover {
+    border-color: hsla(188, 95%, 53%, 0.35);
+    box-shadow:
+      0 0 0 1px hsla(188, 95%, 53%, 0.15),
+      0 24px 60px -24px hsla(188, 95%, 53%, 0.25);
+    transform: translateY(-2px);
+  }
+
+  .gradient-text {
+    background: linear-gradient(135deg, #A78BFA 0%, #22D3EE 50%, #EC4899 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .gradient-border {
+    position: relative;
+  }
+  .gradient-border::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    padding: 1px;
+    border-radius: inherit;
+    background: linear-gradient(135deg, #A78BFA, #22D3EE, #EC4899);
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+            mask-composite: exclude;
+    pointer-events: none;
+  }
+
+  .scroll-hide::-webkit-scrollbar { display: none; }
+  .scroll-hide { scrollbar-width: none; }
+
+  /* Hexagonal grid backdrop pattern (used on empty states) */
+  .pattern-dots {
+    background-image: radial-gradient(circle, hsla(220,14%,96%,0.06) 1px, transparent 1px);
+    background-size: 24px 24px;
+  }
+
+  /* Pulse-glow ring — used to highlight active items */
+  .ring-flux {
+    box-shadow:
+      0 0 0 1px hsla(188, 95%, 53%, 0.5),
+      0 0 30px hsla(188, 95%, 53%, 0.35);
+  }
+
+  /* Subtle inner glow on dark panels */
+  .surface {
+    background: linear-gradient(180deg, hsla(230, 24%, 10%, 0.8) 0%, hsla(230, 26%, 6%, 0.8) 100%);
+    border: 1px solid hsl(var(--border));
+  }
+}
+
+/* App body app-shell ensures content sits above the noise overlay */
+main, header, aside, nav { position: relative; z-index: 2; }

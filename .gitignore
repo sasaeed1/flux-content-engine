@@ -1,0 +1,23 @@
+node_modules/
+dist/
+.env
+.env.local
+.env.*.local
+*.log
+logs/
+tmp/
+.cache/
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+n8n_data/
+
+# web/ — Next.js Flux dashboard
+web/.next/
+web/out/
+web/node_modules/
+
+# Local
+*.pid
+puppeteer-cache/

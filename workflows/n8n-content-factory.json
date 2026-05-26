@@ -1,0 +1,149 @@
+{
+  "name": "Content Engine — Daily Carousel",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 9 * * *"
+            }
+          ]
+        }
+      },
+      "id": "ce-schedule",
+      "name": "Daily 09:00",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [-160, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.CONTENT_ENGINE_URL }}/api/tenant/pipeline/run",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-org-api-key",
+              "value": "={{ $env.ORG_API_KEY }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{ \"approvalMode\": \"auto\" }",
+        "options": {
+          "timeout": 600000,
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "ce-run",
+      "name": "Run Pipeline",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [80, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "typeValidation": "loose"
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "ce-cond-completed",
+              "leftValue": "={{ $json.status }}",
+              "rightValue": "completed",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ]
+        }
+      },
+      "id": "ce-if",
+      "name": "Run Completed?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [320, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.CONTENT_ENGINE_URL }}/api/ops/queue/process-publish",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-api-key",
+              "value": "={{ $env.CONTENT_ENGINE_API_KEY }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{ \"limit\": 5 }",
+        "options": { "timeout": 600000 }
+      },
+      "id": "ce-publish",
+      "name": "Publish Due",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [560, 200]
+    },
+    {
+      "parameters": {},
+      "id": "ce-done",
+      "name": "Done — Live",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [800, 200]
+    },
+    {
+      "parameters": {},
+      "id": "ce-alert",
+      "name": "ALERT — Failed (replace with Slack)",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [560, 420]
+    }
+  ],
+  "connections": {
+    "Daily 09:00": {
+      "main": [[{ "node": "Run Pipeline", "type": "main", "index": 0 }]]
+    },
+    "Run Pipeline": {
+      "main": [[{ "node": "Run Completed?", "type": "main", "index": 0 }]]
+    },
+    "Run Completed?": {
+      "main": [
+        [{ "node": "Publish Due", "type": "main", "index": 0 }],
+        [{ "node": "ALERT — Failed (replace with Slack)", "type": "main", "index": 0 }]
+      ]
+    },
+    "Publish Due": {
+      "main": [[{ "node": "Done — Live", "type": "main", "index": 0 }]]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "saveExecutionProgress": true,
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all"
+  },
+  "pinData": {},
+  "tags": [{ "name": "content-engine" }],
+  "meta": {
+    "description": "Per-tenant daily content factory. The 'Run Pipeline' call uses the org's x-org-api-key; 'Publish Due' uses the ops x-api-key (INTERNAL_API_KEY). For multi-tenant: duplicate this workflow per org, OR add an upstream loop over your org list."
+  }
+}
