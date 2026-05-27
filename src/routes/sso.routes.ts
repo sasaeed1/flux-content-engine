@@ -38,14 +38,23 @@ router.post(
 
     const payload = verifySsoToken(token);
 
-    // Plan gating — Flux is included on growth/enterprise.
-    const plan = (payload.plan ?? 'free').toLowerCase();
-    const includedTiers = new Set(['growth', 'enterprise', 'pro', 'business']);
-    if (!includedTiers.has(plan)) {
-      // Lower tiers can still SSO but get the 'free' Flux tier.
-      log.info({ plan }, 'SSO from lower tier — provisioning free tier');
+    // Translate the issuer's plan name to Flux's internal tier enum.
+    // The DB only knows: free / starter / pro / business.
+    // WappFlow's marketing tiers (growth/enterprise) map onto pro/business.
+    const sourcePlan = (payload.plan ?? 'free').toLowerCase();
+    const tierMap: Record<string, string> = {
+      free: 'free',
+      starter: 'starter',
+      growth: 'pro',
+      pro: 'pro',
+      enterprise: 'business',
+      business: 'business',
+    };
+    const fluxTier = tierMap[sourcePlan] ?? 'free';
+    const includedInFlux = new Set(['pro', 'business']);
+    if (!includedInFlux.has(fluxTier)) {
+      log.info({ sourcePlan, fluxTier }, 'SSO from lower tier — provisioning free tier');
     }
-    const fluxTier = includedTiers.has(plan) ? plan : 'free';
 
     // Look up existing Flux org by external workspace ID.
     const wfId = payload.wf_workspace_id;
@@ -82,6 +91,7 @@ router.post(
             external_source: payload.iss,
             external_owner_email: payload.email ?? null,
             external_owner_name: payload.name ?? null,
+            external_plan: sourcePlan,
             provisioned_via: 'sso',
           },
         })
