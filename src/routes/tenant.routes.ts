@@ -17,7 +17,9 @@ import {
   insertTopics,
   getNextPendingTopic,
   listInstagramAccounts,
+  createInstagramAccount,
 } from '../db/repositories';
+import { supabase } from '../lib/supabase';
 import { loadBrandProfile } from '../modules/brand/brandService';
 import { generateAndInsertTopics } from '../modules/topics/topicService';
 import type { ContentTopicRow, BrandProfileRow } from '../types';
@@ -174,6 +176,57 @@ router.get(
     res.json({
       accounts: rows.map((r) => ({ ...r, ig_access_token: undefined })),
     });
+  }),
+);
+
+router.post(
+  '/tenant/instagram-accounts',
+  asyncHandler(async (req, res) => {
+    const orgId = req.tenant!.organizationId;
+    const body = (req.body ?? {}) as {
+      igBusinessAccountId?: string;
+      accessToken?: string;
+      username?: string;
+      makeDefault?: boolean;
+    };
+    if (!body.igBusinessAccountId || !body.accessToken) {
+      throw new ValidationError(
+        'Both "igBusinessAccountId" and "accessToken" are required',
+      );
+    }
+    // If makeDefault, demote existing defaults first.
+    if (body.makeDefault) {
+      await supabase
+        .from('instagram_accounts')
+        .update({ is_default: false })
+        .eq('organization_id', orgId);
+    }
+    const row = await createInstagramAccount({
+      organization_id: orgId,
+      ig_business_account_id: body.igBusinessAccountId,
+      ig_access_token: body.accessToken,
+      username: body.username ?? null,
+      active: true,
+      is_default: body.makeDefault ?? true,
+    });
+    res.status(201).json({
+      account: { ...row, ig_access_token: undefined },
+    });
+  }),
+);
+
+router.delete(
+  '/tenant/instagram-accounts/:id',
+  asyncHandler(async (req, res) => {
+    const orgId = req.tenant!.organizationId;
+    // Soft-delete: mark inactive so existing scheduled rows still resolve.
+    const { error } = await supabase
+      .from('instagram_accounts')
+      .update({ active: false, is_default: false })
+      .eq('organization_id', orgId)
+      .eq('id', req.params.id);
+    if (error) throw new ValidationError(error.message);
+    res.json({ ok: true });
   }),
 );
 

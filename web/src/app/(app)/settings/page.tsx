@@ -1,0 +1,188 @@
+import { Suspense } from 'react';
+import { Activity, Camera, Key, Shield, Sparkles, User } from 'lucide-react';
+import { PageHeader } from '@/components/flux/page-header';
+import { Badge } from '@/components/ui/badge';
+import { InstagramConnect } from '@/components/settings/instagram-connect';
+import { ApiKeyReveal } from '@/components/settings/api-key-reveal';
+import { api } from '@/lib/api-client';
+import type { InstagramAccount, Organization } from '@/lib/types';
+
+export const dynamic = 'force-dynamic';
+export const metadata = { title: 'Settings · Flux' };
+
+const TIER_COPY: Record<string, { label: string; color: string; desc: string }> = {
+  free: {
+    label: 'Free',
+    color: 'bg-zinc-700/40 text-zinc-200',
+    desc: 'Groq free tier · 5 carousels / month',
+  },
+  starter: {
+    label: 'Starter',
+    color: 'bg-violet-600/30 text-violet-100',
+    desc: 'Paid LLM · 25 carousels / month',
+  },
+  growth: {
+    label: 'Growth',
+    color: 'bg-cyan-600/30 text-cyan-100',
+    desc: 'Image gen + scheduling · 100 carousels / month',
+  },
+  enterprise: {
+    label: 'Enterprise',
+    color: 'bg-pink-600/30 text-pink-100',
+    desc: 'Unlimited · custom models · priority support',
+  },
+};
+
+export default async function SettingsPage() {
+  let org: Organization | null = null;
+  let accounts: InstagramAccount[] = [];
+  let connectionError: string | null = null;
+
+  try {
+    const [meRes, igRes] = await Promise.all([
+      api.me(),
+      api.listInstagramAccounts(),
+    ]);
+    org = meRes.organization;
+    accounts = igRes.accounts;
+  } catch (err) {
+    connectionError = err instanceof Error ? err.message : 'Engine unreachable';
+  }
+
+  const tier = (org?.subscription_tier ?? 'free').toLowerCase();
+  const tierInfo = TIER_COPY[tier] ?? TIER_COPY.free;
+
+  return (
+    <div className="space-y-8">
+      <PageHeader
+        eyebrow="Workspace"
+        title={
+          <>
+            Your <span className="gradient-text">settings</span>.
+          </>
+        }
+        subtitle="Manage your workspace, Instagram connections, and API access."
+      />
+
+      {connectionError && (
+        <div className="rounded-xl border border-destructive/40 bg-destructive/10 p-4 text-sm text-red-200">
+          {connectionError}
+        </div>
+      )}
+
+      {/* Workspace card */}
+      <section className="rounded-2xl glass p-6">
+        <header className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-flux-soft">
+              <User className="h-5 w-5 text-primary" />
+            </div>
+            <div>
+              <h2 className="text-lg font-semibold">{org?.name ?? 'Workspace'}</h2>
+              <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">
+                {org?.slug ? `/${org.slug}` : org?.id?.slice(0, 8)}
+              </p>
+            </div>
+          </div>
+          <Badge className={tierInfo.color}>{tierInfo.label}</Badge>
+        </header>
+
+        <p className="mt-4 text-sm text-muted-foreground">{tierInfo.desc}</p>
+
+        <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <Tile icon={Activity} label="Status" value={org?.active ? 'Active' : 'Paused'} />
+          <Tile
+            icon={Sparkles}
+            label="AI provider"
+            value={(org?.ai_provider ?? 'groq').toUpperCase()}
+          />
+          <Tile icon={Shield} label="Tier" value={tierInfo.label} />
+        </div>
+      </section>
+
+      {/* Instagram accounts */}
+      <section className="rounded-2xl glass p-6">
+        <header className="flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-flux-soft">
+            <Camera className="h-5 w-5 text-primary" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <h2 className="text-lg font-semibold">Instagram accounts</h2>
+            <p className="text-sm text-muted-foreground">
+              Connect an Instagram Business or Creator account to publish carousels.
+              Until you connect one, carousels are produced for review only — Flux
+              won&apos;t auto-publish.
+            </p>
+          </div>
+          <Badge variant={accounts.length ? 'success' : 'outline'}>
+            {accounts.length} connected
+          </Badge>
+        </header>
+
+        <div className="mt-6">
+          <Suspense>
+            <InstagramConnect accounts={accounts} />
+          </Suspense>
+        </div>
+      </section>
+
+      {/* API key */}
+      <section className="rounded-2xl glass p-6">
+        <header className="flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-flux-soft">
+            <Key className="h-5 w-5 text-primary" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <h2 className="text-lg font-semibold">API key</h2>
+            <p className="text-sm text-muted-foreground">
+              Server-only — never expose this in browser code. Use it to call the
+              Flux engine directly or to integrate from your own services.
+            </p>
+          </div>
+        </header>
+
+        <div className="mt-5">
+          <ApiKeyReveal apiKey={org?.api_key ?? ''} />
+        </div>
+      </section>
+
+      {/* Danger zone */}
+      <section className="rounded-2xl border border-red-500/30 bg-red-500/[0.04] p-6">
+        <header className="flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-red-500/10">
+            <Shield className="h-5 w-5 text-red-300" />
+          </div>
+          <div>
+            <h2 className="text-lg font-semibold text-red-100">Danger zone</h2>
+            <p className="text-sm text-red-200/80">
+              Workspace deletion and tier downgrades coming soon. For now, email
+              support to delete your workspace.
+            </p>
+          </div>
+        </header>
+      </section>
+    </div>
+  );
+}
+
+function Tile({
+  icon: Icon,
+  label,
+  value,
+}: {
+  icon: typeof Activity;
+  label: string;
+  value: string;
+}) {
+  return (
+    <div className="flex items-center gap-3 rounded-xl border border-border/50 bg-secondary/30 p-3">
+      <Icon className="h-4 w-4 text-primary" />
+      <div className="min-w-0">
+        <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+          {label}
+        </div>
+        <div className="truncate text-sm">{value}</div>
+      </div>
+    </div>
+  );
+}

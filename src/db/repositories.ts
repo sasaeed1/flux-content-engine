@@ -47,6 +47,24 @@ function unwrapMaybe<T>(result: SupabaseResult<T>, action: string): T | null {
   return result.data;
 }
 
+/**
+ * Convert camelCase / PascalCase object keys to snake_case for Supabase.
+ * The DB schema is snake_case but our TypeScript types and API payloads use
+ * camelCase, so every write that takes user input needs this transform.
+ * Leaves arrays and primitive values untouched.
+ */
+function camelToSnake(key: string): string {
+  return key.replace(/([A-Z])/g, '_$1').toLowerCase().replace(/^_/, '');
+}
+
+function snakeKeys<T extends Record<string, unknown>>(input: T): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(input)) {
+    out[camelToSnake(k)] = v;
+  }
+  return out;
+}
+
 function nowIso(): string {
   return new Date().toISOString();
 }
@@ -171,8 +189,9 @@ export async function listBrandsForOrg(orgId: string): Promise<BrandProfileRow[]
 }
 
 export async function createBrand(row: Partial<BrandProfileRow>): Promise<BrandProfileRow> {
+  // Translate camelCase API payload → snake_case DB columns.
   return unwrap(
-    await supabase.from('brand_profiles').insert(row).select('*').single(),
+    await supabase.from('brand_profiles').insert(snakeKeys(row)).select('*').single(),
     'createBrand',
   );
 }
@@ -184,7 +203,7 @@ export async function updateBrand(
 ): Promise<void> {
   const { error } = await supabase
     .from('brand_profiles')
-    .update(patch)
+    .update(snakeKeys(patch))
     .eq('id', id)
     .eq('organization_id', orgId);
   if (error) throw new DatabaseError(`updateBrand: ${error.message}`);

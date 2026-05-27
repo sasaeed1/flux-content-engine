@@ -62,6 +62,20 @@ export interface PipelineRun {
   started_at: string;
   finished_at: string | null;
   error: string | null;
+  metadata?: Record<string, unknown> | null;
+}
+
+export interface InstagramAccount {
+  id: string;
+  organization_id: string;
+  ig_business_account_id: string;
+  username: string | null;
+  profile_picture_url: string | null;
+  followers_count: number | null;
+  active: boolean;
+  is_default: boolean;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface SlideContent {

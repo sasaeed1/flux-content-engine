@@ -7,9 +7,11 @@
  *     callers can pass `next.revalidate` to opt into ISR.
  */
 import 'server-only';
+import { cookies } from 'next/headers';
 import type {
   BrandProfile,
   CarouselRow,
+  InstagramAccount,
   Organization,
   OrgOverview,
   PipelineRun,
@@ -17,19 +19,44 @@ import type {
   ThemePreset,
 } from './types';
 
+import { COOKIE_API_KEY } from './session';
+
 const ENGINE_URL = process.env.CONTENT_ENGINE_URL ?? 'http://localhost:8090';
-const ORG_API_KEY = process.env.CONTENT_ENGINE_ORG_API_KEY ?? '';
+const FALLBACK_API_KEY = process.env.CONTENT_ENGINE_ORG_API_KEY ?? '';
 
 interface FetchOpts extends Omit<RequestInit, 'body'> {
   json?: unknown;
 }
 
+/**
+ * Resolve the org API key for the current request.
+ *   1. Prefer the SSO-issued cookie (set by /auth/sso) — that scopes to the
+ *      signed-in workspace.
+ *   2. Fall back to the env-configured demo key so the default deployment
+ *      still works for the seed workspace.
+ */
+async function resolveApiKey(): Promise<string> {
+  try {
+    // `cookies()` only works in request scope. If we're called outside one
+    // (during build / static generation) this throws — we fall through.
+    const store = await cookies();
+    const v = store.get(COOKIE_API_KEY)?.value;
+    if (v) return v;
+  } catch {
+    /* not in request scope */
+  }
+  return FALLBACK_API_KEY;
+}
+
 async function engineFetch<T>(path: string, opts: FetchOpts = {}): Promise<T> {
-  if (!ORG_API_KEY) {
-    throw new Error('CONTENT_ENGINE_ORG_API_KEY is not set in web/.env.local');
+  const apiKey = await resolveApiKey();
+  if (!apiKey) {
+    throw new Error(
+      'No Flux session — sign in or set CONTENT_ENGINE_ORG_API_KEY in web/.env.local',
+    );
   }
   const headers = new Headers(opts.headers);
-  headers.set('x-org-api-key', ORG_API_KEY);
+  headers.set('x-org-api-key', apiKey);
   if (opts.json !== undefined) headers.set('content-type', 'application/json');
 
   const res = await fetch(`${ENGINE_URL}${path}`, {
@@ -96,4 +123,22 @@ export const api = {
       `/api/tenant/carousels/${id}/approve`,
       { method: 'POST', json: { publishAt } },
     ),
+
+  // Instagram accounts
+  listInstagramAccounts: () =>
+    engineFetch<{ accounts: InstagramAccount[] }>('/api/tenant/instagram-accounts'),
+  connectInstagram: (body: {
+    igBusinessAccountId: string;
+    accessToken: string;
+    username?: string;
+    makeDefault?: boolean;
+  }) =>
+    engineFetch<{ account: InstagramAccount }>('/api/tenant/instagram-accounts', {
+      method: 'POST',
+      json: body,
+    }),
+  disconnectInstagram: (id: string) =>
+    engineFetch<{ ok: true }>(`/api/tenant/instagram-accounts/${id}`, {
+      method: 'DELETE',
+    }),
 };
