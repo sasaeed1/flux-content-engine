@@ -3,13 +3,20 @@ import {
   ArrowRight,
   Brain,
   Calendar,
+  CheckCheck,
   CheckCircle2,
   ExternalLink,
+  FileText,
   Layers,
   Palette,
+  Pencil,
+  RefreshCw,
+  Shuffle,
   ShieldCheck,
+  Smartphone,
   Sparkles,
   Users,
+  Wand2,
   Zap,
 } from 'lucide-react';
 import { AuroraBackground } from '@/components/flux/aurora-bg';
@@ -279,6 +286,66 @@ export default function HomePage() {
               </div>
               <h3 className="mt-4 text-base font-semibold">{step.title}</h3>
               <p className="mt-2 text-sm text-muted-foreground">{step.body}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* "Built for daily output" — what makes Flux different */}
+      <section className="relative mx-auto mt-24 max-w-7xl px-4 sm:mt-32 sm:px-6">
+        <div className="text-center">
+          <Badge variant="outline">Built for daily output</Badge>
+          <h2 className="mt-5 text-3xl font-semibold tracking-tight sm:text-5xl">
+            Not your average <GradientText>AI carousel toy</GradientText>.
+          </h2>
+          <p className="mx-auto mt-4 max-w-2xl text-sm text-muted-foreground sm:text-base">
+            Most AI tools get you 80% there and dump the rest on you. Flux is built
+            around the last mile — editing, diversity, brand fidelity, approval.
+          </p>
+        </div>
+
+        <div className="mt-14 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {[
+            {
+              icon: Pencil,
+              title: 'Edit before you ship',
+              body: 'Rewrite the caption (shorter / professional / casual / stronger CTA), regenerate a single slide, propose 4 CTA variations — all inline. Nothing publishes until you approve.',
+            },
+            {
+              icon: Shuffle,
+              title: 'Diversity engine',
+              body: '8 hook archetypes rotate automatically — curiosity, contrarian, story, list, stat, myth-bust… Flux reads your last 12 posts and forbids repeats. Your feed never feels copy-pasted.',
+            },
+            {
+              icon: CheckCheck,
+              title: 'Bulk approve',
+              body: 'Generate a week of content in a morning. Select 10 carousels, hit approve, walk away. Flux queues them all to Instagram with their captions and hashtags.',
+            },
+            {
+              icon: FileText,
+              title: 'Brand kit ingestion',
+              body: 'Drop your logo, brand book, style guide, or pitch deck. Flux uses them to keep every post unmistakably yours. PDF, PNG, SVG — drag and drop.',
+            },
+            {
+              icon: Smartphone,
+              title: 'Mobile-first approval',
+              body: 'Swipe through previews, edit captions, hit approve — all from your phone. The carousel review lives where you are, not chained to a desk.',
+            },
+            {
+              icon: RefreshCw,
+              title: 'Visual rhythm variation',
+              body: 'Layout archetypes rotate per slide — minimalist, oversized, quote, stat, dense. Slides alternate density so your carousels feel paced, not uniform.',
+            },
+          ].map((f) => (
+            <div
+              key={f.title}
+              className="rounded-2xl glass p-5 transition hover:-translate-y-0.5 hover:border-primary/40"
+            >
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-flux-soft">
+                <f.icon className="h-5 w-5 text-primary" />
+              </div>
+              <h3 className="mt-4 text-base font-semibold">{f.title}</h3>
+              <p className="mt-2 text-sm text-muted-foreground">{f.body}</p>
             </div>
           ))}
         </div>

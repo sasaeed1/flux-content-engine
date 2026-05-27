@@ -1,77 +1,125 @@
 'use client';
 
 import { useState, useTransition } from 'react';
-import { Loader2, Save } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { Loader2, Save, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { updateBrandAction } from '@/app/(app)/brand/actions';
+import {
+  createBrandAction,
+  updateBrandAction,
+} from '@/app/(app)/brand/actions';
 import type { BrandProfile, ThemePreset } from '@/lib/types';
 
 interface Props {
-  brand: BrandProfile;
+  // Pass null to render the form in "create your brand" mode.
+  brand: BrandProfile | null;
   themes: ThemePreset[];
 }
 
+const PLACEHOLDER = {
+  name: 'My brand',
+  niche: 'general business',
+  businessType: '',
+  tone: 'clear, confident, direct',
+  postStyle: 'educational',
+  ctaStyle: 'follow for more',
+  voiceKeywords: '',
+  voiceAvoid: '',
+  themePresetKey: '',
+};
+
 export function BrandForm({ brand, themes }: Props) {
+  const router = useRouter();
   const [pending, start] = useTransition();
   const [status, setStatus] = useState<{ kind: 'ok' | 'err'; msg: string } | null>(null);
 
+  const isCreating = brand === null;
+
   const [form, setForm] = useState({
-    name: brand.name,
-    niche: brand.niche ?? '',
-    businessType: brand.businessType ?? '',
-    tone: brand.tone ?? '',
-    ctaStyle: brand.ctaStyle ?? '',
-    postStyle: brand.postStyle ?? '',
-    voiceKeywords: brand.voiceKeywords.join(', '),
-    voiceAvoid: brand.voiceAvoid.join(', '),
-    themePresetKey: brand.theme.presetKey ?? '',
+    name: brand?.name ?? PLACEHOLDER.name,
+    niche: brand?.niche ?? PLACEHOLDER.niche,
+    businessType: brand?.businessType ?? PLACEHOLDER.businessType,
+    tone: brand?.tone ?? PLACEHOLDER.tone,
+    ctaStyle: brand?.ctaStyle ?? PLACEHOLDER.ctaStyle,
+    postStyle: brand?.postStyle ?? PLACEHOLDER.postStyle,
+    voiceKeywords: brand?.voiceKeywords.join(', ') ?? '',
+    voiceAvoid: brand?.voiceAvoid.join(', ') ?? '',
+    themePresetKey: brand?.theme.presetKey ?? '',
   });
 
-  const save = () =>
+  const submit = () =>
     start(async () => {
       setStatus(null);
+      const payload = {
+        name: form.name.trim() || PLACEHOLDER.name,
+        niche: form.niche.trim() || null,
+        businessType: form.businessType.trim() || null,
+        tone: form.tone.trim() || null,
+        ctaStyle: form.ctaStyle.trim() || null,
+        postStyle: form.postStyle.trim() || null,
+        voiceKeywords: form.voiceKeywords
+          .split(',')
+          .map((s) => s.trim())
+          .filter(Boolean),
+        voiceAvoid: form.voiceAvoid
+          .split(',')
+          .map((s) => s.trim())
+          .filter(Boolean),
+        themePresetKey: form.themePresetKey.trim() || null,
+      };
       try {
-        await updateBrandAction(brand.id, {
-          name: form.name.trim(),
-          niche: form.niche.trim() || null,
-          businessType: form.businessType.trim() || null,
-          tone: form.tone.trim() || null,
-          ctaStyle: form.ctaStyle.trim() || null,
-          postStyle: form.postStyle.trim() || null,
-          voiceKeywords: form.voiceKeywords
-            .split(',')
-            .map((s) => s.trim())
-            .filter(Boolean),
-          voiceAvoid: form.voiceAvoid
-            .split(',')
-            .map((s) => s.trim())
-            .filter(Boolean),
-          themePresetKey: form.themePresetKey.trim() || null,
-        });
-        setStatus({ kind: 'ok', msg: 'Brand updated.' });
+        if (isCreating) {
+          await createBrandAction(payload);
+          setStatus({ kind: 'ok', msg: 'Brand profile created.' });
+          // Force a full reload so the page re-renders with the new brand.
+          router.refresh();
+        } else {
+          await updateBrandAction(brand!.id, payload);
+          setStatus({ kind: 'ok', msg: 'Brand updated.' });
+        }
       } catch (err) {
         setStatus({
           kind: 'err',
-          msg: err instanceof Error ? err.message : 'Failed to update brand.',
+          msg: err instanceof Error ? err.message : 'Save failed.',
         });
       }
     });
 
-  const colors = brand.theme.colors;
+  // For the preview we use either the brand's theme or a sensible fallback.
+  const colors = brand?.theme.colors ?? {
+    background: '#0F0F12',
+    foreground: '#FAFAFA',
+    accent: '#A78BFA',
+    primary: '#22D3EE',
+  };
 
   return (
     <div className="grid gap-6 lg:grid-cols-3">
       {/* Left — form */}
       <div className="space-y-6 lg:col-span-2">
+        {isCreating && (
+          <div className="flex items-start gap-3 rounded-2xl border border-primary/30 bg-primary/[0.06] p-4 text-sm">
+            <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+            <div className="flex-1">
+              <strong className="text-foreground">Let&apos;s set up your brand.</strong>{' '}
+              <span className="text-muted-foreground">
+                Tweak the defaults below and hit save. You can change everything later —
+                Flux will start using these on the next generation.
+              </span>
+            </div>
+          </div>
+        )}
+
         <Section title="Identity">
           <Field label="Brand name">
             <Input
               value={form.name}
               onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+              placeholder={PLACEHOLDER.name}
             />
           </Field>
           <Field label="Niche">
@@ -182,9 +230,13 @@ export function BrandForm({ brand, themes }: Props) {
               <span className="text-red-300">{status.msg}</span>
             )}
           </div>
-          <Button onClick={save} disabled={pending} variant="primary">
-            {pending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-            Save changes
+          <Button onClick={submit} disabled={pending} variant="primary">
+            {pending ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Save className="h-4 w-4" />
+            )}
+            {isCreating ? 'Create brand profile' : 'Save changes'}
           </Button>
         </div>
       </div>

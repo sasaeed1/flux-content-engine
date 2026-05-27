@@ -15,18 +15,19 @@ const jetbrains = JetBrains_Mono({
 
 export const metadata: Metadata = {
   title: {
-    default: 'Flux — AI Instagram content, on autopilot',
+    default: 'Flux — Your AI social media team',
     template: '%s · Flux',
   },
   description:
-    'Flux is the AI content engine that turns one topic into a finished, on-brand Instagram carousel — ready to schedule.',
+    'Daily Instagram content without hiring a designer. Flux researches, writes, designs, captions, and queues — every post on-brand, every time.',
   applicationName: 'Flux',
   authors: [{ name: 'Flux' }],
   openGraph: {
     title: 'Flux',
-    description: 'AI Instagram content, on autopilot.',
+    description: 'Your AI social media team. On the payroll for $19.',
     type: 'website',
   },
+  // icon.svg + apple-icon.svg live next to this file — Next auto-wires them.
 };
 
 export const viewport: Viewport = {

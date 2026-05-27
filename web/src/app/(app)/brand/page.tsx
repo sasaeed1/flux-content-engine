@@ -11,22 +11,6 @@ export default async function BrandPage() {
     api.themes(),
   ]);
 
-  if (!brand) {
-    return (
-      <div className="space-y-6">
-        <PageHeader
-          eyebrow="Workspace"
-          title="Brand"
-          subtitle="No brand profile found for this workspace."
-        />
-        <div className="rounded-2xl glass p-10 text-center text-sm text-muted-foreground">
-          Create a brand profile via the API to get started — Flux will fall back to
-          neutral defaults until you do.
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-6">
       <PageHeader
@@ -36,7 +20,11 @@ export default async function BrandPage() {
             Your <span className="gradient-text">brand</span>.
           </>
         }
-        subtitle="The voice, tone, and visual feel Flux applies to every carousel it creates."
+        subtitle={
+          brand
+            ? 'The voice, tone, and visual feel Flux applies to every carousel it creates.'
+            : "Set up the voice, tone, and visual feel Flux should use. We've pre-filled neutral defaults — tweak and save."
+        }
       />
       <BrandForm brand={brand} themes={themes} />
     </div>

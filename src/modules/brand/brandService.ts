@@ -89,7 +89,12 @@ function rowToProfile(brand: BrandProfileRow, theme: BrandTheme): BrandProfile {
 
 /**
  * Resolve a brand for an organization. If `brandId` is omitted, returns the
- * org's default brand. Errors if none exists yet.
+ * org's default brand. If none exists, falls back to a neutral default
+ * profile so generation always works — fresh workspaces can still produce
+ * carousels before the user has touched the Brand editor.
+ *
+ * `brandId` is explicit — if it's provided and the row doesn't exist, we
+ * still throw (that's a real lookup error vs. a missing default).
  */
 export async function loadBrandProfile(
   orgId: string,
@@ -100,17 +105,45 @@ export async function loadBrandProfile(
     : await getDefaultBrandForOrg(orgId);
 
   if (!row) {
-    throw new NotFoundError(
-      brandId
-        ? `Brand profile ${brandId} not found for organization ${orgId}`
-        : `Organization ${orgId} has no default brand profile. Create one first.`,
-    );
+    if (brandId) {
+      throw new NotFoundError(
+        `Brand profile ${brandId} not found for organization ${orgId}`,
+      );
+    }
+    // No default brand yet — return a neutral fallback so the pipeline keeps
+    // working. The user can customize via the Brand editor at any time.
+    log.warn({ orgId }, 'No default brand — generating with neutral defaults');
+    return buildNeutralBrandProfile(orgId);
   }
 
   const preset = row.theme_preset_id ? await getThemeById(row.theme_preset_id) : null;
   const theme = buildTheme(row, preset);
   log.debug({ brandId: row.id, presetKey: theme.presetKey }, 'Brand resolved');
   return rowToProfile(row, theme);
+}
+
+/** Neutral fallback used when an org hasn't set up a brand profile yet. */
+function buildNeutralBrandProfile(orgId: string): BrandProfile {
+  return {
+    id: 'neutral-default',
+    organizationId: orgId,
+    name: 'Default brand',
+    niche: 'general business',
+    businessType: null,
+    tone: 'clear, confident, direct',
+    postStyle: 'educational',
+    ctaStyle: 'follow for more',
+    logoUrl: null,
+    voiceKeywords: [],
+    voiceAvoid: [],
+    theme: {
+      presetKey: null,
+      colors: { ...DEFAULT_COLORS },
+      typography: { ...DEFAULT_TYPOGRAPHY },
+      visualTone: null,
+      effects: {},
+    },
+  };
 }
 
 /**

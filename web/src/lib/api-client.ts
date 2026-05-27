@@ -90,6 +90,11 @@ export const api = {
       method: 'PATCH',
       json: patch,
     }),
+  createBrand: (body: Record<string, unknown>) =>
+    engineFetch<{ brand: { id: string } }>('/api/tenant/brand', {
+      method: 'POST',
+      json: body,
+    }),
 
   nextTopic: () => engineFetch<{ topic: unknown }>('/api/tenant/topics/next'),
   addTopics: (topics: unknown[]) =>

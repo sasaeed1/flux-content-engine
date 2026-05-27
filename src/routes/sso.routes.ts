@@ -19,6 +19,7 @@ import { asyncHandler } from '../middleware';
 import { ValidationError, AppError } from '../lib/errors';
 import { supabase } from '../lib/supabase';
 import { verifySsoToken } from '../lib/sso';
+import { createBrand, getDefaultBrandForOrg } from '../db/repositories';
 import { childLogger } from '../lib/logger';
 
 const router = Router();
@@ -112,6 +113,34 @@ router.post(
         .update({ subscription_tier: fluxTier })
         .eq('id', org.id);
       if (!error) org.subscription_tier = fluxTier;
+    }
+
+    // Ensure the org has a default brand profile so the dashboard, topic
+    // generator, and pipeline all "just work" on first sign-in. The user can
+    // customize anything via the Brand editor later.
+    try {
+      const existingBrand = await getDefaultBrandForOrg(org.id);
+      if (!existingBrand) {
+        await createBrand({
+          organization_id: org.id,
+          name: payload.name ?? org.name ?? 'My brand',
+          niche: 'general business',
+          tone: 'clear, confident, direct',
+          post_style: 'educational',
+          cta_style: 'follow for more',
+          voice_keywords: [],
+          voice_avoid: [],
+          is_default: true,
+        });
+        log.info({ orgId: org.id }, 'Seeded default brand profile');
+      }
+    } catch (err) {
+      // Don't block sign-in over brand seeding — the pipeline will fall back
+      // to neutral defaults if no row exists.
+      log.warn(
+        { orgId: org.id, err: (err as Error).message },
+        'Default brand seeding failed — pipeline will use neutral defaults',
+      );
     }
 
     res.json({
