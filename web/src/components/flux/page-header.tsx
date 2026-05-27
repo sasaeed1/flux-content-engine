@@ -29,7 +29,7 @@ export function PageHeader({
             {eyebrow}
           </p>
         )}
-        <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">{title}</h1>
+        <h1 className="text-2xl font-semibold tracking-tight sm:text-4xl">{title}</h1>
         {subtitle && (
           <p className="max-w-2xl text-sm text-muted-foreground sm:text-base">
             {subtitle}

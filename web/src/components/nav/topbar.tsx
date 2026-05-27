@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { Bell, Search } from 'lucide-react';
 import { Logo } from '@/components/flux/logo';
 import { Button } from '@/components/ui/button';
+import { MobileNavButton } from '@/components/nav/mobile-nav';
 import { api } from '@/lib/api-client';
 
 export async function Topbar() {
@@ -15,8 +16,11 @@ export async function Topbar() {
   }
 
   return (
-    <header className="sticky top-0 z-20 flex h-16 items-center gap-4 border-b border-border/60 bg-background/60 px-4 backdrop-blur-xl sm:px-6">
-      <Link href="/dashboard" className="lg:hidden">
+    <header className="sticky top-0 z-20 flex h-16 items-center gap-3 border-b border-border/60 bg-background/70 px-3 backdrop-blur-xl sm:px-6">
+      {/* Mobile: hamburger that opens the drawer */}
+      <MobileNavButton />
+
+      <Link href="/dashboard" className="shrink-0 lg:hidden">
         <Logo showWordmark={false} />
       </Link>
 

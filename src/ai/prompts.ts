@@ -170,6 +170,8 @@ export function buildCarouselContentPrompt(input: {
   topic: string;
   angle?: string | null;
   template: TemplateDefinition;
+  /** Optional anti-repetition + archetype guidance (from historyService). */
+  diversityBlock?: string;
 }): Prompt {
   const system = [
     'You are a world-class short-form content writer for Instagram carousels.',
@@ -179,6 +181,7 @@ export function buildCarouselContentPrompt(input: {
     brandVoiceBlock(input.brand),
     '',
     COPY_RULES,
+    input.diversityBlock ? `\n${input.diversityBlock}` : '',
   ].join('\n');
 
   const slotSpec = describeSlideSlots(input.template.slides);
@@ -194,6 +197,12 @@ export function buildCarouselContentPrompt(input: {
     '',
     'TEMPLATE SLIDES:',
     slotSpec,
+    '',
+    'SLIDE RHYTHM — vary the texture across slides:',
+    ' - Do NOT make every slide read the same. Alternate density.',
+    ' - At least one slide should feel short (≤8 words). At least one should feel dense.',
+    ' - At least one slide should anchor on a defensible number or short list — never two in a row.',
+    ' - Hook → varied middle → close. The reader should feel pacing changes.',
     '',
     'SLOT VALUE GUIDANCE:',
     '- title: 4-8 words, punchy, often uppercase-feel. NOT the topic title verbatim.',

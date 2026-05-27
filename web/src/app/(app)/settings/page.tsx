@@ -1,9 +1,10 @@
 import { Suspense } from 'react';
-import { Activity, Camera, Key, Shield, Sparkles, User } from 'lucide-react';
+import { Activity, Camera, Key, Layers, Shield, Sparkles, User } from 'lucide-react';
 import { PageHeader } from '@/components/flux/page-header';
 import { Badge } from '@/components/ui/badge';
 import { InstagramConnect } from '@/components/settings/instagram-connect';
 import { ApiKeyReveal } from '@/components/settings/api-key-reveal';
+import { BrandKitUpload } from '@/components/settings/brand-kit-upload';
 import { api } from '@/lib/api-client';
 import type { InstagramAccount, Organization } from '@/lib/types';
 
@@ -36,15 +37,18 @@ const TIER_COPY: Record<string, { label: string; color: string; desc: string }> 
 export default async function SettingsPage() {
   let org: Organization | null = null;
   let accounts: InstagramAccount[] = [];
+  let brandAssets: Awaited<ReturnType<typeof api.listBrandAssets>>['assets'] = [];
   let connectionError: string | null = null;
 
   try {
-    const [meRes, igRes] = await Promise.all([
+    const [meRes, igRes, baRes] = await Promise.all([
       api.me(),
       api.listInstagramAccounts(),
+      api.listBrandAssets().catch(() => ({ assets: [] })),
     ]);
     org = meRes.organization;
     accounts = igRes.accounts;
+    brandAssets = baRes.assets ?? [];
   } catch (err) {
     connectionError = err instanceof Error ? err.message : 'Engine unreachable';
   }
@@ -97,6 +101,29 @@ export default async function SettingsPage() {
             value={(org?.ai_provider ?? 'groq').toUpperCase()}
           />
           <Tile icon={Shield} label="Tier" value={tierInfo.label} />
+        </div>
+      </section>
+
+      {/* Brand kit */}
+      <section id="brand-kit" className="rounded-2xl glass p-6">
+        <header className="flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-flux-soft">
+            <Layers className="h-5 w-5 text-primary" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <h2 className="text-lg font-semibold">Brand kit</h2>
+            <p className="text-sm text-muted-foreground">
+              Drop your logos, brand books, style guides, or pitch decks here so
+              Flux can keep every post on-brand.
+            </p>
+          </div>
+          <Badge variant={brandAssets.length ? 'success' : 'outline'}>
+            {brandAssets.length} asset{brandAssets.length === 1 ? '' : 's'}
+          </Badge>
+        </header>
+
+        <div className="mt-6">
+          <BrandKitUpload assets={brandAssets} />
         </div>
       </section>
 

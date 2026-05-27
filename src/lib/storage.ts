@@ -61,4 +61,7 @@ export const storagePaths = {
   /** Brand logo (uploaded once per brand profile). */
   logo: (orgId: string, brandProfileId: string, ext = 'png'): string =>
     `orgs/${orgId}/brands/${brandProfileId}/logo.${ext}`,
+  /** Brand kit assets (PDFs, style guides, etc.). */
+  brandAsset: (orgId: string, assetId: string, ext: string): string =>
+    `orgs/${orgId}/brand-kit/${assetId}.${ext}`,
 };

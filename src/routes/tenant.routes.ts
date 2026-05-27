@@ -20,6 +20,9 @@ import {
   createInstagramAccount,
 } from '../db/repositories';
 import { supabase } from '../lib/supabase';
+import { uploadBuffer, storagePaths } from '../lib/storage';
+import { env } from '../config/env';
+import crypto from 'node:crypto';
 import { loadBrandProfile } from '../modules/brand/brandService';
 import { generateAndInsertTopics } from '../modules/topics/topicService';
 import type { ContentTopicRow, BrandProfileRow } from '../types';
@@ -225,6 +228,136 @@ router.delete(
       .update({ active: false, is_default: false })
       .eq('organization_id', orgId)
       .eq('id', req.params.id);
+    if (error) throw new ValidationError(error.message);
+    res.json({ ok: true });
+  }),
+);
+
+/* ---------- /tenant/brand/assets — Brand Kit uploads ---------- */
+// Stores brand reference materials (logo PNGs, brand-book PDFs, style guides)
+// in the logo bucket under orgs/<id>/brand-kit/. AI extraction of colors/tone
+// from these assets is a follow-up — for now the upload endpoint just
+// preserves them so we can extract later.
+
+const ALLOWED_BRAND_MIME: Record<string, string> = {
+  'application/pdf': 'pdf',
+  'image/png': 'png',
+  'image/jpeg': 'jpg',
+  'image/jpg': 'jpg',
+  'image/svg+xml': 'svg',
+  'image/webp': 'webp',
+};
+
+router.get(
+  '/tenant/brand/assets',
+  asyncHandler(async (req, res) => {
+    const orgId = req.tenant!.organizationId;
+    const { data, error } = await supabase
+      .from('generated_assets')
+      .select('id, type, provider, storage_path, public_url, bytes, created_at, metadata')
+      .eq('organization_id', orgId)
+      .eq('provider', 'brand-kit')
+      .order('created_at', { ascending: false })
+      .limit(50);
+    if (error) throw new ValidationError(error.message);
+    res.json({ assets: data ?? [] });
+  }),
+);
+
+router.post(
+  '/tenant/brand/assets',
+  asyncHandler(async (req, res) => {
+    const orgId = req.tenant!.organizationId;
+    const body = (req.body ?? {}) as {
+      filename?: string;
+      contentType?: string;
+      // base64-encoded file body — keeps us off multer for now.
+      data?: string;
+      // optional user-supplied label
+      label?: string;
+    };
+    if (!body.data || !body.contentType || !body.filename) {
+      throw new ValidationError('Fields "filename", "contentType" and "data" (base64) are required');
+    }
+    const ext = ALLOWED_BRAND_MIME[body.contentType.toLowerCase()];
+    if (!ext) {
+      throw new ValidationError(
+        `Unsupported file type "${body.contentType}". Accepted: PDF, PNG, JPG, SVG, WebP.`,
+      );
+    }
+    let buffer: Buffer;
+    try {
+      buffer = Buffer.from(body.data, 'base64');
+    } catch {
+      throw new ValidationError('Invalid base64 data');
+    }
+    const maxBytes = 10 * 1024 * 1024; // 10 MB cap
+    if (buffer.length === 0) throw new ValidationError('Empty file');
+    if (buffer.length > maxBytes) {
+      throw new ValidationError(
+        `File too large (${(buffer.length / 1024 / 1024).toFixed(1)}MB). Max 10MB.`,
+      );
+    }
+    const assetId = crypto.randomUUID();
+    const path = storagePaths.brandAsset(orgId, assetId, ext);
+    const upload = await uploadBuffer({
+      bucket: env.SUPABASE_LOGO_BUCKET,
+      path,
+      body: buffer,
+      contentType: body.contentType,
+    });
+
+    const { data: row, error } = await supabase
+      .from('generated_assets')
+      .insert({
+        id: assetId,
+        organization_id: orgId,
+        type: 'upload',
+        provider: 'brand-kit',
+        storage_path: upload.path,
+        public_url: upload.publicUrl,
+        bytes: buffer.length,
+        metadata: {
+          original_filename: body.filename,
+          content_type: body.contentType,
+          label: body.label ?? null,
+          // AI extraction status — populated when we add the extractor.
+          extraction: { status: 'pending', extracted_at: null },
+        },
+      })
+      .select('*')
+      .single();
+    if (error) throw new ValidationError(error.message);
+
+    res.status(201).json({ asset: row });
+  }),
+);
+
+router.delete(
+  '/tenant/brand/assets/:id',
+  asyncHandler(async (req, res) => {
+    const orgId = req.tenant!.organizationId;
+    const id = req.params.id;
+    // Lookup the row to find the storage path.
+    const { data: row, error: lookupErr } = await supabase
+      .from('generated_assets')
+      .select('storage_path')
+      .eq('organization_id', orgId)
+      .eq('id', id)
+      .eq('provider', 'brand-kit')
+      .maybeSingle();
+    if (lookupErr) throw new ValidationError(lookupErr.message);
+    if (!row) throw new ValidationError('Asset not found');
+
+    // Best-effort storage cleanup; non-fatal if it fails.
+    if (row.storage_path) {
+      await supabase.storage.from(env.SUPABASE_LOGO_BUCKET).remove([row.storage_path]);
+    }
+    const { error } = await supabase
+      .from('generated_assets')
+      .delete()
+      .eq('organization_id', orgId)
+      .eq('id', id);
     if (error) throw new ValidationError(error.message);
     res.json({ ok: true });
   }),

@@ -2,6 +2,14 @@
 import { completeJson } from '../../ai/llm';
 import { buildCarouselContentPrompt, carouselContentSchema } from '../../ai/prompts';
 import { ctxFromOrg } from '../topics/topicService';
+import {
+  getRecentHistory,
+  pickNextHookArchetype,
+  pickLayoutArchetypes,
+  renderAntiRepetitionBlock,
+  type HookArchetype,
+  type LayoutArchetype,
+} from './historyService';
 import { childLogger } from '../../lib/logger';
 import type { BrandProfile, CarouselContent, OrganizationRow, SlideContent, Template } from '../../types';
 
@@ -20,12 +28,33 @@ export async function generateCarouselContent(input: {
   template: Template;
   topic: string;
   angle?: string | null;
-}): Promise<CarouselContent> {
+}): Promise<CarouselContent & { hookArchetype: HookArchetype; layoutArchetypes: LayoutArchetype[] }> {
+  // Pull the last N posts to drive anti-repetition + archetype rotation.
+  // If anything fails (fresh workspace, transient DB issue) we proceed without
+  // history — the brand voice block alone is still enough to generate.
+  let diversityBlock = '';
+  let hookArchetype: HookArchetype;
+  let layoutArchetypes: LayoutArchetype[];
+  try {
+    const history = await getRecentHistory(input.organization.id, 12);
+    hookArchetype = pickNextHookArchetype(history.recentHookArchetypes);
+    layoutArchetypes = pickLayoutArchetypes(
+      input.template.definition.slides.length,
+      history.recentLayoutArchetypes,
+    );
+    diversityBlock = renderAntiRepetitionBlock(history, hookArchetype);
+  } catch (err) {
+    log.warn({ err: (err as Error).message }, 'history fetch failed — generating without diversity guidance');
+    hookArchetype = 'curiosity';
+    layoutArchetypes = [];
+  }
+
   const { system, user } = buildCarouselContentPrompt({
     brand: input.brand,
     topic: input.topic,
     angle: input.angle,
     template: input.template.definition,
+    diversityBlock,
   });
 
   const raw = await completeJson(
@@ -47,6 +76,8 @@ export async function generateCarouselContent(input: {
       orgId: input.organization.id,
       slides: slides.length,
       hashtags: hashtags.length,
+      hookArchetype,
+      layoutArchetypes,
     },
     'Carousel content generated',
   );
@@ -58,5 +89,7 @@ export async function generateCarouselContent(input: {
     caption: raw.caption,
     hashtags,
     slides,
+    hookArchetype,
+    layoutArchetypes,
   };
 }

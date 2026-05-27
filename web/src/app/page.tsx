@@ -3,14 +3,13 @@ import {
   ArrowRight,
   Brain,
   Calendar,
-  Check,
   CheckCircle2,
   ExternalLink,
-  Images,
+  Layers,
   Palette,
-  Send,
+  ShieldCheck,
   Sparkles,
-  Wand2,
+  Users,
   Zap,
 } from 'lucide-react';
 import { AuroraBackground } from '@/components/flux/aurora-bg';
@@ -19,44 +18,45 @@ import { GradientText } from '@/components/flux/gradient-text';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 
+// Three SMB-anchored value props — leans into operational leverage, not AI jargon.
 const features = [
   {
-    icon: Wand2,
-    title: 'Topic → Carousel in minutes',
-    body: 'Pick a topic. Flux researches it, writes the slides, designs them, and queues them to publish.',
+    icon: ShieldCheck,
+    title: 'On-brand. Every single post.',
+    body: 'Your colors, fonts, tone, hashtags — locked in once. Flux holds the line so your feed actually looks like one brand.',
   },
   {
-    icon: Brain,
-    title: 'On-brand by default',
-    body: 'Your voice, colors, fonts, hashtags — applied to every post. No drift, no rewrites.',
+    icon: Zap,
+    title: 'Post daily without hiring a designer.',
+    body: 'One topic in. Finished carousel out — captions, hashtags, slides, scheduling. The whole content desk in 60 seconds.',
   },
   {
-    icon: Send,
-    title: 'Approve, schedule, ship',
-    body: 'Review carousels in your library. Approve and Flux schedules to Instagram automatically.',
+    icon: Users,
+    title: 'You approve. Flux ships.',
+    body: 'Edit a caption, rewrite a hook, swap a slide — then approve. Nothing publishes until you say it does.',
   },
 ];
 
 const howItWorks = [
   {
     icon: Sparkles,
-    title: 'Pick (or generate) a topic',
-    body: 'Type one or let Flux suggest grounded in your niche, brand voice, and recent posts.',
+    title: 'Drop a topic',
+    body: 'Type one or have Flux generate a fresh batch grounded in your brand and recent posts.',
   },
   {
     icon: Brain,
-    title: 'AI writes your script',
-    body: 'Hook, body slides, CTA — all in your tone, with your keywords, avoiding your no-go words.',
+    title: 'Flux writes the script',
+    body: 'Hook, body slides, CTA — in your voice, with your keywords, avoiding your no-go phrases.',
   },
   {
     icon: Palette,
     title: 'Slides render on-brand',
-    body: 'Server-side HTML + Chromium produces pixel-perfect PNGs in seconds. Nine themes built-in.',
+    body: 'Deterministic HTML + Chromium → pixel-perfect PNGs. Nine themes, your colors and type, every time.',
   },
   {
     icon: Calendar,
-    title: 'Review, approve, schedule',
-    body: 'Approve from the library. Optional publish-at time. Flux handles the IG Graph API for you.',
+    title: 'Review → approve → ship',
+    body: 'Edit inline. Approve. Optionally schedule. Flux talks to Instagram so you don’t have to.',
   },
 ];
 
@@ -81,89 +81,95 @@ const tiers: Array<{
     ctaHref: '/signup?plan=free',
     features: [
       '5 carousels / month',
-      'Groq free-tier AI',
-      'All 9 theme presets',
-      'Manual approval workflow',
+      'Subtle Flux watermark',
+      '3 starter themes',
       '1 brand profile',
       '1 Instagram account',
+      'Manual approval workflow',
       'Community support',
     ],
   },
   {
     key: 'starter',
     name: 'Starter',
-    price: '$9',
+    price: '$19',
     cadence: '/month',
-    description: 'For solo creators and SMBs posting regularly.',
+    description: 'For solo founders and SMBs posting daily.',
     cta: 'Start free trial',
     ctaHref: '/signup?plan=starter',
     features: [
-      '25 carousels / month',
-      'Premium LLM (GPT-4o-mini / Claude Haiku)',
-      'Auto-schedule to IG',
-      '3 brand profiles',
-      '2 Instagram accounts',
+      '50 carousels / month',
+      'No watermark',
+      'All 9 themes + brand overrides',
+      'Auto-schedule to Instagram',
+      '2 brand profiles · 2 IG accounts',
+      'Inline caption rewrites',
       'Email support',
-      'Hashtag intelligence',
     ],
   },
   {
     key: 'growth',
     name: 'Growth',
-    price: '$20',
+    price: '$49',
     cadence: '/month',
-    description: 'For brands that post daily and want the works.',
+    description: 'For brands going from monthly to daily output.',
     popular: true,
     cta: 'Start free trial',
     ctaHref: '/signup?plan=growth',
     features: [
-      '100 carousels / month',
-      'Premium LLM + AI image generation',
-      'Auto-schedule + drip queues',
-      'Unlimited brand profiles',
-      '5 Instagram accounts',
+      '250 carousels / month',
+      'Multi-brand workspaces',
+      'Advanced approvals + bulk actions',
+      'Analytics + performance feedback',
+      '5 brand profiles · 5 IG accounts',
+      'Brand kit ingestion (PDF / logo)',
       'Priority support',
-      'Analytics feedback loop',
-      'WappFlow integration',
     ],
   },
   {
-    key: 'enterprise',
-    name: 'Enterprise',
-    price: 'Custom',
-    cadence: '',
-    description: 'Agencies, multi-brand orgs, and high-volume teams.',
-    cta: 'Talk to sales',
-    ctaHref: 'mailto:hello@remoteops.co?subject=Flux%20Enterprise',
+    key: 'agency',
+    name: 'Agency',
+    price: '$149',
+    cadence: '/month',
+    description: 'For agencies running content for clients.',
+    cta: 'Start free trial',
+    ctaHref: '/signup?plan=agency',
     features: [
-      'Unlimited carousels',
-      'Custom models (BYOK or hosted)',
-      'Unlimited brand profiles',
-      'Unlimited Instagram accounts',
-      'White-label dashboard',
-      'SSO, audit logs, role-based access',
-      'Dedicated success manager',
-      'SLA-backed support',
+      'Unlimited brands & IG accounts',
+      'Client approval links',
+      'White-label exports',
+      'Team collaboration + internal notes',
+      'Brand-level analytics dashboards',
+      'Workspace switcher',
+      'Dedicated onboarding',
     ],
   },
 ];
 
 const faqs = [
   {
-    q: 'How is Flux different from ChatGPT or Canva?',
-    a: 'ChatGPT writes text. Canva is a manual editor. Flux is an end-to-end engine — it researches, writes, designs, captions, and queues a publish-ready carousel from a single topic, in your brand voice.',
+    q: 'What does Flux actually do that ChatGPT or Canva doesn’t?',
+    a: 'ChatGPT writes text. Canva is a manual editor. Flux is your content desk — it researches the topic, writes the script in your brand voice, renders the slides on-brand, drafts the caption + hashtags, and queues to Instagram. End-to-end. You only step in to review.',
+  },
+  {
+    q: 'Will every post look the same after a few weeks?',
+    a: 'No. Flux rotates through hook archetypes, layout rhythms, and tracks your recent posts to avoid repeating itself. The whole point is daily output that doesn’t feel daily.',
+  },
+  {
+    q: 'Can I edit before it ships?',
+    a: 'Yes. Edit the caption inline, rewrite it (shorter / more professional / more casual / stronger CTA), regenerate a single slide, or rewrite the CTA. Nothing publishes without your approval.',
   },
   {
     q: 'Do I need an Instagram account to start?',
-    a: 'No. On any tier you can produce and review carousels without connecting Instagram. You only need to connect IG when you want Flux to publish for you.',
+    a: 'No. On any tier you can produce and review carousels without connecting Instagram. Connect IG when you want Flux to publish for you.',
   },
   {
-    q: 'Can I cancel anytime?',
-    a: 'Yes. No contracts on Starter or Growth. Cancel from Settings → Billing — you keep access until the end of the period.',
+    q: 'How does pricing work?',
+    a: 'You pay by output — carousels per month, brands, and connected IG accounts. No tokens, no per-prompt fees, no AI credit math.',
   },
   {
-    q: 'Is this the same as WappFlow?',
-    a: "No — Flux is its own product. But if you're already on WappFlow Growth or Enterprise, Flux is included free as part of your plan.",
+    q: 'Is this part of WappFlow?',
+    a: "Flux is its own product. But if you're on WappFlow Growth or Enterprise, Flux is included in your plan — sign in from your WappFlow dashboard.",
   },
 ];
 
@@ -173,7 +179,7 @@ export default function HomePage() {
       <AuroraBackground />
 
       {/* Top bar */}
-      <header className="relative z-10 mx-auto flex max-w-7xl items-center justify-between px-6 py-5 sm:px-10">
+      <header className="relative z-10 mx-auto flex max-w-7xl items-center justify-between px-4 py-5 sm:px-10">
         <Link href="/" className="shrink-0">
           <Logo />
         </Link>
@@ -192,7 +198,7 @@ export default function HomePage() {
           </Link>
         </nav>
         <div className="flex items-center gap-2">
-          <Button variant="ghost" size="sm" asChild>
+          <Button variant="ghost" size="sm" asChild className="hidden sm:inline-flex">
             <Link href="/login">Sign in</Link>
           </Button>
           <Button size="sm" variant="primary" asChild>
@@ -205,19 +211,19 @@ export default function HomePage() {
       </header>
 
       {/* Hero */}
-      <section className="relative mx-auto max-w-5xl px-6 pt-16 text-center sm:pt-24">
+      <section className="relative mx-auto max-w-5xl px-4 pt-12 text-center sm:px-6 sm:pt-24">
         <Badge variant="accent" className="mx-auto">
-          <Sparkles className="h-3 w-3" /> New · multi-tenant content engine
+          <Sparkles className="h-3 w-3" /> Your AI content desk · for SMBs
         </Badge>
-        <h1 className="mt-6 text-5xl font-semibold leading-[1.05] tracking-tight sm:text-7xl">
-          AI Instagram content,
-          <br />
-          <GradientText>on autopilot.</GradientText>
+        <h1 className="mt-6 text-[2.5rem] font-semibold leading-[1.05] tracking-tight sm:text-7xl">
+          Your <GradientText>AI social media team.</GradientText>
+          <span className="block text-foreground/80 mt-2 text-3xl font-medium sm:text-5xl">
+            On the payroll for $19.
+          </span>
         </h1>
         <p className="mx-auto mt-6 max-w-2xl text-base text-muted-foreground sm:text-lg">
-          {process.env.NEXT_PUBLIC_FLUX_TAGLINE ??
-            'Flux turns one topic into a finished, on-brand Instagram carousel — researched, written, designed, captioned, and queued.'}{' '}
-          One platform. Zero designers.
+          Daily Instagram content without hiring a designer. Flux researches, writes,
+          designs, captions, and queues — every post on-brand, every time.
         </p>
         <div className="mt-9 flex flex-wrap items-center justify-center gap-3">
           <Button size="lg" variant="primary" asChild>
@@ -229,32 +235,33 @@ export default function HomePage() {
             <a href="#pricing">See pricing</a>
           </Button>
         </div>
-
         <p className="mt-5 text-xs text-muted-foreground">
           No credit card required · 5 carousels free / month
         </p>
       </section>
 
       {/* Feature row */}
-      <section className="relative mx-auto mt-28 grid max-w-6xl gap-4 px-6 sm:grid-cols-3">
+      <section className="relative mx-auto mt-20 grid max-w-6xl gap-4 px-4 sm:mt-28 sm:grid-cols-3 sm:px-6">
         {features.map((f) => (
           <div
             key={f.title}
             className="relative rounded-2xl glass p-6 transition-all duration-300 hover:-translate-y-1 hover:border-primary/40"
           >
-            <f.icon className="h-5 w-5 text-primary" />
-            <h3 className="mt-3 text-lg font-semibold">{f.title}</h3>
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-flux-soft">
+              <f.icon className="h-5 w-5 text-primary" />
+            </div>
+            <h3 className="mt-4 text-lg font-semibold">{f.title}</h3>
             <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{f.body}</p>
           </div>
         ))}
       </section>
 
       {/* How it works */}
-      <section id="how" className="relative mx-auto mt-32 max-w-6xl px-6">
+      <section id="how" className="relative mx-auto mt-24 max-w-6xl px-4 sm:mt-32 sm:px-6">
         <div className="text-center">
           <Badge variant="outline">How it works</Badge>
-          <h2 className="mt-5 text-4xl font-semibold tracking-tight sm:text-5xl">
-            From topic to <GradientText>published</GradientText> in 4 steps.
+          <h2 className="mt-5 text-3xl font-semibold tracking-tight sm:text-5xl">
+            From idea to <GradientText>published</GradientText> in 60 seconds.
           </h2>
           <p className="mx-auto mt-4 max-w-2xl text-sm text-muted-foreground sm:text-base">
             No drag-and-drop. No prompt engineering. Just topics in, posts out.
@@ -263,10 +270,7 @@ export default function HomePage() {
 
         <div className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {howItWorks.map((step, i) => (
-            <div
-              key={step.title}
-              className="relative rounded-2xl glass p-6"
-            >
+            <div key={step.title} className="relative rounded-2xl glass p-6">
               <div className="absolute right-5 top-5 text-3xl font-bold text-muted-foreground/30">
                 0{i + 1}
               </div>
@@ -280,16 +284,48 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* "Why daily output kills small brands" — narrative section */}
+      <section className="relative mx-auto mt-24 max-w-5xl px-4 sm:mt-32 sm:px-6">
+        <div className="rounded-3xl border border-border/60 bg-card/40 p-6 backdrop-blur-xl sm:p-10">
+          <Badge variant="outline">The real problem</Badge>
+          <h2 className="mt-4 text-2xl font-semibold leading-tight tracking-tight sm:text-4xl">
+            Hiring a designer costs <span className="text-foreground/60 line-through">$2,400/mo</span>.{' '}
+            <br className="hidden sm:block" />
+            <GradientText>Flux costs $19.</GradientText>
+          </h2>
+          <p className="mt-5 max-w-2xl text-sm text-muted-foreground sm:text-base">
+            Daily Instagram output is what compounds. But your time isn’t free, freelancers
+            ghost, and Canva still needs someone to sit in front of it. Flux ships the work —
+            you ship the brand.
+          </p>
+          <div className="mt-7 grid gap-3 sm:grid-cols-3">
+            {[
+              { label: '8h / week saved', sub: 'No more "what do we post today"' },
+              { label: '20+ posts / month', sub: 'Without burning out the founder' },
+              { label: '1 brand voice', sub: 'Across every post, every day' },
+            ].map((s) => (
+              <div
+                key={s.label}
+                className="rounded-2xl border border-border/40 bg-secondary/30 p-4"
+              >
+                <div className="text-sm font-semibold">{s.label}</div>
+                <div className="mt-0.5 text-xs text-muted-foreground">{s.sub}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* Pricing */}
-      <section id="pricing" className="relative mx-auto mt-32 max-w-7xl px-6">
+      <section id="pricing" className="relative mx-auto mt-24 max-w-7xl px-4 sm:mt-32 sm:px-6">
         <div className="text-center">
           <Badge variant="outline">Pricing</Badge>
-          <h2 className="mt-5 text-4xl font-semibold tracking-tight sm:text-5xl">
-            Start free. Upgrade when you outgrow it.
+          <h2 className="mt-5 text-3xl font-semibold tracking-tight sm:text-5xl">
+            Pay by <GradientText>posts</GradientText>, not tokens.
           </h2>
           <p className="mx-auto mt-4 max-w-2xl text-sm text-muted-foreground sm:text-base">
-            No per-seat gotchas. No surprise bills. Free tier covers real usage —
-            no demo trap.
+            No AI credit math. No surprise bills. Just carousels, brands, and IG accounts —
+            the numbers that matter.
           </p>
         </div>
 
@@ -306,7 +342,10 @@ export default function HomePage() {
             >
               {t.popular && (
                 <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                  <Badge variant="accent" className="px-3 py-1 text-[11px] uppercase tracking-[0.16em]">
+                  <Badge
+                    variant="accent"
+                    className="px-3 py-1 text-[11px] uppercase tracking-[0.16em]"
+                  >
                     Most popular
                   </Badge>
                 </div>
@@ -352,23 +391,43 @@ export default function HomePage() {
           ))}
         </div>
 
+        {/* Enterprise strip */}
+        <div className="mt-8 rounded-2xl border border-border/60 bg-secondary/20 p-6">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div>
+              <div className="flex items-center gap-2">
+                <Layers className="h-4 w-4 text-primary" />
+                <h3 className="text-base font-semibold">Enterprise</h3>
+              </div>
+              <p className="mt-1.5 text-sm text-muted-foreground">
+                Self-hosting · BYOK models · SSO · audit logs · custom rendering · SLA.
+              </p>
+            </div>
+            <Button asChild variant="outline">
+              <a href="mailto:hello@remoteops.co?subject=Flux%20Enterprise">
+                Talk to sales <ArrowRight className="h-4 w-4" />
+              </a>
+            </Button>
+          </div>
+        </div>
+
         <p className="mt-10 text-center text-xs text-muted-foreground">
-          All tiers include unlimited brand profile edits, theme switching, and dashboard access. Paid
-          tier API integrations are rolling out throughout the quarter.
+          Annual billing saves 20%. All paid plans include a 7-day free trial — no
+          credit card required.
         </p>
       </section>
 
       {/* CTA strip */}
-      <section className="relative mx-auto mt-32 max-w-5xl px-6">
-        <div className="overflow-hidden rounded-3xl bg-gradient-to-br from-primary/20 via-violet-600/15 to-cyan-500/15 p-10 text-center backdrop-blur-xl">
+      <section className="relative mx-auto mt-24 max-w-5xl px-4 sm:mt-32 sm:px-6">
+        <div className="overflow-hidden rounded-3xl bg-gradient-to-br from-primary/20 via-violet-600/15 to-cyan-500/15 p-8 text-center backdrop-blur-xl sm:p-10">
           <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_30%_30%,rgba(139,92,246,0.35),transparent_60%),radial-gradient(circle_at_70%_70%,rgba(34,211,238,0.25),transparent_60%)]" />
           <Sparkles className="mx-auto h-7 w-7 text-primary" />
-          <h2 className="mt-5 text-3xl font-semibold tracking-tight sm:text-4xl">
+          <h2 className="mt-5 text-2xl font-semibold tracking-tight sm:text-4xl">
             Stop staring at a blank Canva.
           </h2>
           <p className="mx-auto mt-3 max-w-xl text-sm text-muted-foreground sm:text-base">
-            5 carousels free, every month. Connect Instagram when you&apos;re ready.
-            Cancel any time.
+            5 carousels free, every month. Connect Instagram when you’re ready. Cancel any
+            time.
           </p>
           <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
             <Button size="lg" variant="primary" asChild>
@@ -377,7 +436,11 @@ export default function HomePage() {
               </Link>
             </Button>
             <Button size="lg" variant="outline" asChild>
-              <a href="https://wappflow.remoteops.co" target="_blank" rel="noopener noreferrer">
+              <a
+                href="https://wappflow.remoteops.co"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
                 Already on WappFlow? <ExternalLink className="h-4 w-4" />
               </a>
             </Button>
@@ -386,10 +449,10 @@ export default function HomePage() {
       </section>
 
       {/* FAQ */}
-      <section id="faq" className="relative mx-auto mt-32 max-w-3xl px-6">
+      <section id="faq" className="relative mx-auto mt-24 max-w-3xl px-4 sm:mt-32 sm:px-6">
         <div className="text-center">
           <Badge variant="outline">FAQ</Badge>
-          <h2 className="mt-5 text-4xl font-semibold tracking-tight sm:text-5xl">
+          <h2 className="mt-5 text-3xl font-semibold tracking-tight sm:text-5xl">
             Common questions.
           </h2>
         </div>
@@ -408,13 +471,13 @@ export default function HomePage() {
         </div>
       </section>
 
-      <footer className="relative mt-24 border-t border-border/40 px-6 py-8 text-xs text-muted-foreground sm:px-10">
+      <footer className="relative mt-24 border-t border-border/40 px-4 py-8 text-xs text-muted-foreground sm:px-10">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <Logo />
-            <span className="opacity-70">v0.2 — beta</span>
+            <span className="opacity-70">v0.3 — beta</span>
           </div>
-          <div className="flex items-center gap-6">
+          <div className="flex flex-wrap items-center gap-4 sm:gap-6">
             <Link href="/help" className="hover:text-foreground">
               Help
             </Link>

@@ -157,6 +157,12 @@ export async function runPipeline(options: PipelineOptions): Promise<PipelineRes
 
     /* ---------- persist draft (status='ready') ---------- */
     if (isCarousel && carouselContent) {
+      // carouselContent now carries archetype info — write it into metadata so
+      // historyService can read it back on the next generation for rotation.
+      const cc = carouselContent as typeof carouselContent & {
+        hookArchetype?: string;
+        layoutArchetypes?: string[];
+      };
       const row = await insertCarousel({
         organization_id: org.id,
         topic_id: topic.id,
@@ -171,6 +177,10 @@ export async function runPipeline(options: PipelineOptions): Promise<PipelineRes
         slides: carouselContent.slides as unknown as Record<string, unknown>,
         slide_count: carouselContent.slides.length,
         status: 'ready',
+        metadata: {
+          hook_archetype: cc.hookArchetype ?? null,
+          layout_archetypes: cc.layoutArchetypes ?? [],
+        } as Record<string, unknown>,
       });
       carouselId = row.id;
     } else if (singleContent) {

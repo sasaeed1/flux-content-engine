@@ -1,6 +1,8 @@
-import { Images } from 'lucide-react';
+import Link from 'next/link';
+import { Images, Plus } from 'lucide-react';
 import { PageHeader } from '@/components/flux/page-header';
-import { CarouselGridCard } from '@/components/library/carousel-grid-card';
+import { LibraryGrid } from '@/components/library/library-grid';
+import { Button } from '@/components/ui/button';
 import { api } from '@/lib/api-client';
 
 export const dynamic = 'force-dynamic';
@@ -25,7 +27,14 @@ export default async function LibraryPage() {
             The <span className="gradient-text">library</span>.
           </>
         }
-        subtitle="Every carousel Flux has produced. Click in to review and approve."
+        subtitle="Every carousel Flux has produced. Edit, approve, or bulk-publish."
+        actions={
+          <Button asChild variant="primary" size="sm">
+            <Link href="/dashboard">
+              <Plus className="h-3.5 w-3.5" /> Generate
+            </Link>
+          </Button>
+        }
       />
 
       {error && (
@@ -47,11 +56,7 @@ export default async function LibraryPage() {
           </p>
         </div>
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {carousels.map((c) => (
-            <CarouselGridCard key={c.id} row={c} />
-          ))}
-        </div>
+        <LibraryGrid carousels={carousels} />
       )}
     </div>
   );

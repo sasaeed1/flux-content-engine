@@ -6,6 +6,8 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { SlideStrip } from '@/components/carousel/slide-strip';
 import { ApprovalBar } from '@/components/carousel/approval-bar';
+import { CaptionEditor } from '@/components/carousel/caption-editor';
+import { CtaEditor } from '@/components/carousel/cta-editor';
 import { api } from '@/lib/api-client';
 import { fmtRelative } from '@/lib/format';
 
@@ -26,8 +28,12 @@ export default async function CarouselPage({
   }
   if (!carousel) notFound();
 
+  // Once a carousel has been approved/scheduled/published, edits are locked.
+  const editable = !['approved', 'published', 'publishing', 'scheduled'].includes(
+    carousel.status,
+  );
+
   return (
-    // `min-w-0` lets the children shrink instead of forcing the parent to grow.
     <div className="space-y-8 min-w-0">
       <Button variant="ghost" size="sm" asChild className="-ml-2 self-start">
         <Link href="/library">
@@ -50,20 +56,41 @@ export default async function CarouselPage({
         }
       />
 
-      <SlideStrip slides={carousel.slides ?? []} />
+      <SlideStrip slides={carousel.slides ?? []} carouselId={carousel.id} editable={editable} />
 
       <div className="grid gap-6 lg:grid-cols-3 min-w-0">
-        <section className="space-y-3 lg:col-span-2">
-          <h2 className="text-sm font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-            Caption
-          </h2>
-          <div className="whitespace-pre-wrap rounded-2xl glass p-5 text-sm leading-relaxed">
-            {carousel.caption ?? <span className="text-muted-foreground">No caption written yet.</span>}
+        <section className="space-y-6 lg:col-span-2">
+          <div className="space-y-3">
+            <h2 className="text-sm font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+              Caption
+            </h2>
+            {editable ? (
+              <CaptionEditor carouselId={carousel.id} initial={carousel.caption} />
+            ) : (
+              <div className="whitespace-pre-wrap rounded-2xl glass p-5 text-sm leading-relaxed">
+                {carousel.caption ?? (
+                  <span className="text-muted-foreground">No caption written yet.</span>
+                )}
+              </div>
+            )}
           </div>
 
+          {carousel.cta && (
+            <div className="space-y-3">
+              <h3 className="text-sm font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+                Call to action
+              </h3>
+              {editable ? (
+                <CtaEditor carouselId={carousel.id} initial={carousel.cta} />
+              ) : (
+                <div className="rounded-2xl glass p-5 text-sm">{carousel.cta}</div>
+              )}
+            </div>
+          )}
+
           {carousel.hashtags?.length > 0 && (
-            <>
-              <h3 className="mt-6 text-sm font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+            <div className="space-y-3">
+              <h3 className="text-sm font-semibold uppercase tracking-[0.14em] text-muted-foreground">
                 Hashtags
               </h3>
               <div className="flex flex-wrap gap-1.5 rounded-2xl glass p-4">
@@ -73,16 +100,7 @@ export default async function CarouselPage({
                   </Badge>
                 ))}
               </div>
-            </>
-          )}
-
-          {carousel.cta && (
-            <>
-              <h3 className="mt-6 text-sm font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-                Call to action
-              </h3>
-              <div className="rounded-2xl glass p-5 text-sm">{carousel.cta}</div>
-            </>
+            </div>
           )}
         </section>
 

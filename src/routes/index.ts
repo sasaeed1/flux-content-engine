@@ -3,6 +3,7 @@ import { Router } from 'express';
 import health from './health.routes';
 import tenant from './tenant.routes';
 import pipeline from './pipeline.routes';
+import edit from './edit.routes';
 import ops from './ops.routes';
 import webhooks from './webhooks.routes';
 import sso from './sso.routes';
@@ -21,6 +22,7 @@ router.use('/api', sso);
 const api = Router();
 api.use(tenant);
 api.use(pipeline);
+api.use(edit);
 api.use(ops);
 router.use('/api', api);
 

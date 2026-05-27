@@ -141,4 +141,91 @@ export const api = {
     engineFetch<{ ok: true }>(`/api/tenant/instagram-accounts/${id}`, {
       method: 'DELETE',
     }),
+
+  // Caption edits
+  setCaption: (id: string, caption: string) =>
+    engineFetch<{ ok: true; caption: string }>(`/api/tenant/carousels/${id}/caption`, {
+      method: 'POST',
+      json: { caption },
+    }),
+  rewriteCaption: (
+    id: string,
+    style:
+      | 'shorter'
+      | 'longer'
+      | 'professional'
+      | 'casual'
+      | 'aggressive'
+      | 'stronger-cta'
+      | 'rewrite',
+  ) =>
+    engineFetch<{ ok: true; caption: string }>(
+      `/api/tenant/carousels/${id}/caption/rewrite`,
+      { method: 'POST', json: { style } },
+    ),
+
+  // CTA edits
+  setCta: (id: string, cta: string) =>
+    engineFetch<{ ok: true; cta: string }>(`/api/tenant/carousels/${id}/cta`, {
+      method: 'POST',
+      json: { cta },
+    }),
+  rewriteCta: (id: string, variations = 3) =>
+    engineFetch<{ ok: true; ctas: string[] }>(
+      `/api/tenant/carousels/${id}/cta/rewrite`,
+      { method: 'POST', json: { variations } },
+    ),
+
+  // Slide edits
+  setSlide: (id: string, idx: number, data: Record<string, unknown>) =>
+    engineFetch<{ ok: true; slides: unknown[] }>(
+      `/api/tenant/carousels/${id}/slides/${idx}`,
+      { method: 'POST', json: { data } },
+    ),
+  rewriteSlide: (
+    id: string,
+    idx: number,
+    style: 'rewrite' | 'shorter' | 'denser' | 'rewrite-hook' | 'rewrite-cta',
+  ) =>
+    engineFetch<{ ok: true; slides: unknown[] }>(
+      `/api/tenant/carousels/${id}/slides/${idx}/rewrite`,
+      { method: 'POST', json: { style } },
+    ),
+
+  // Bulk approve
+  bulkApprove: (carouselIds: string[], publishAt?: string) =>
+    engineFetch<{
+      ok: true;
+      results: Array<{ id: string; ok: boolean; publishQueueId?: string; error?: string }>;
+    }>('/api/tenant/carousels/bulk/approve', {
+      method: 'POST',
+      json: { carouselIds, publishAt },
+    }),
+
+  // Brand kit
+  listBrandAssets: () =>
+    engineFetch<{
+      assets: Array<{
+        id: string;
+        type: string;
+        provider: string;
+        storage_path: string;
+        public_url: string;
+        bytes: number;
+        created_at: string;
+        metadata: Record<string, unknown>;
+      }>;
+    }>('/api/tenant/brand/assets'),
+  uploadBrandAsset: (body: {
+    filename: string;
+    contentType: string;
+    data: string;
+    label?: string;
+  }) =>
+    engineFetch<{ asset: { id: string; public_url: string } }>(
+      '/api/tenant/brand/assets',
+      { method: 'POST', json: body },
+    ),
+  deleteBrandAsset: (id: string) =>
+    engineFetch<{ ok: true }>(`/api/tenant/brand/assets/${id}`, { method: 'DELETE' }),
 };

@@ -21,3 +21,22 @@ export async function disconnectInstagramAction(id: string) {
   revalidatePath('/dashboard');
   return res;
 }
+
+export async function uploadBrandAssetAction(body: {
+  filename: string;
+  contentType: string;
+  data: string;
+  label?: string;
+}) {
+  const res = await api.uploadBrandAsset(body);
+  revalidatePath('/settings');
+  revalidatePath('/brand');
+  return res;
+}
+
+export async function deleteBrandAssetAction(id: string) {
+  const res = await api.deleteBrandAsset(id);
+  revalidatePath('/settings');
+  revalidatePath('/brand');
+  return res;
+}
