@@ -18,6 +18,7 @@ import {
   getNextPendingTopic,
   listInstagramAccounts,
   createInstagramAccount,
+  getThemeByKey,
 } from '../db/repositories';
 import { supabase } from '../lib/supabase';
 import { uploadBuffer, storagePaths } from '../lib/storage';
@@ -79,15 +80,45 @@ router.get(
   }),
 );
 
+/**
+ * Translate the UI-friendly `themePresetKey` into the DB-friendly
+ * `themePresetId` (a UUID FK). The brand_profiles table only has the FK.
+ * Returns a new body object with the substitution applied.
+ */
+async function resolveThemePresetKey(
+  body: Record<string, unknown>,
+): Promise<Record<string, unknown>> {
+  const next = { ...body };
+  if ('themePresetKey' in next) {
+    const key = next.themePresetKey;
+    delete next.themePresetKey;
+    if (typeof key === 'string' && key.trim().length > 0) {
+      const preset = await getThemeByKey(key.trim());
+      if (!preset) {
+        throw new ValidationError(`Unknown theme preset key "${key}"`);
+      }
+      next.themePresetId = preset.id;
+    } else {
+      // Empty / null → explicit clear.
+      next.themePresetId = null;
+    }
+  }
+  return next;
+}
+
 router.post(
   '/tenant/brand',
   asyncHandler(async (req, res) => {
     const orgId = req.tenant!.organizationId;
-    const body = (req.body ?? {}) as Partial<BrandProfileRow>;
+    const body = (req.body ?? {}) as Record<string, unknown>;
     if (!body.name || typeof body.name !== 'string') {
       throw new ValidationError('Field "name" is required');
     }
-    const row = await createBrand({ ...body, organization_id: orgId });
+    const resolved = await resolveThemePresetKey(body);
+    const row = await createBrand({
+      ...(resolved as Partial<BrandProfileRow>),
+      organization_id: orgId,
+    });
     res.status(201).json({ brand: row });
   }),
 );
@@ -96,7 +127,8 @@ router.patch(
   '/tenant/brand/:id',
   asyncHandler(async (req, res) => {
     const orgId = req.tenant!.organizationId;
-    await updateBrand(orgId, req.params.id, req.body ?? {});
+    const resolved = await resolveThemePresetKey((req.body ?? {}) as Record<string, unknown>);
+    await updateBrand(orgId, req.params.id, resolved as Partial<BrandProfileRow>);
     res.json({ ok: true });
   }),
 );
