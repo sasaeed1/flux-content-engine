@@ -1,8 +1,9 @@
 import Link from 'next/link';
-import { Bell, Search } from 'lucide-react';
+import { Bell } from 'lucide-react';
 import { Logo } from '@/components/flux/logo';
 import { Button } from '@/components/ui/button';
 import { MobileNavButton } from '@/components/nav/mobile-nav';
+import { CmdKSearchButton } from '@/components/nav/cmdk-search-button';
 import { api } from '@/lib/api-client';
 
 export async function Topbar() {
@@ -25,14 +26,7 @@ export async function Topbar() {
       </Link>
 
       <div className="flex flex-1 items-center gap-2">
-        <div className="relative hidden w-full max-w-md md:block">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <input
-            type="search"
-            placeholder="Search topics, carousels, captions…"
-            className="h-9 w-full rounded-lg border border-border bg-input/50 pl-9 pr-3 text-sm placeholder:text-muted-foreground/70 focus:outline-none focus:ring-2 focus:ring-ring"
-          />
-        </div>
+        <CmdKSearchButton />
       </div>
 
       <div className="flex items-center gap-2">

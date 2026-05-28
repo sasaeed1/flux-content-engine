@@ -1,0 +1,385 @@
+/**
+ * Intelligence API — the AI surface that powers Flux v2's command palette,
+ * topic engine, hook engine, and AI presence cards.
+ *
+ *   GET  /api/tenant/intelligence/providers     — provider plane status
+ *   POST /api/tenant/intelligence/hooks         — generate N hooks by archetype
+ *   POST /api/tenant/intelligence/topics/score  — score one or more topics
+ *   GET  /api/tenant/intelligence/insights      — AI cards for Dashboard/Library
+ *   POST /api/tenant/intelligence/command       — Cmd-K NL → action
+ *   GET  /api/tenant/intelligence/memory/recall — top hooks/themes/CTAs for this brand
+ *
+ * All endpoints scoped by `x-org-api-key`. All AI calls go through the
+ * router (free-tier first, failover, caching, quota tracking).
+ */
+import { Router } from 'express';
+import { z } from 'zod';
+import { asyncHandler, requireTenant } from '../middleware';
+import { ValidationError, AppError } from '../lib/errors';
+import { getOrgById } from '../db/repositories';
+import { loadBrandProfile } from '../modules/brand/brandService';
+import { completeJsonRouted, providerStatus } from '../ai/router';
+import { dailySummary as quotaSummary } from '../ai/quotaTracker';
+import { supabase } from '../lib/supabase';
+import { HOOK_ARCHETYPES, getRecentHistory } from '../modules/content/historyService';
+import { childLogger } from '../lib/logger';
+
+const router = Router();
+router.use(requireTenant);
+const log = childLogger({ module: 'intelligence' });
+
+/* ============================================================
+ *  /providers — plane status (configured / quota used today / etc.)
+ * ============================================================ */
+
+router.get(
+  '/tenant/intelligence/providers',
+  asyncHandler(async (_req, res) => {
+    const usage = await quotaSummary();
+    res.json({ providers: providerStatus(), todayUsage: usage });
+  }),
+);
+
+/* ============================================================
+ *  /hooks — generate N hooks for a topic, optionally pinned to an archetype.
+ * ============================================================ */
+
+const hooksRequestSchema = z.object({
+  topic: z.string().min(2).max(300),
+  count: z.number().int().min(1).max(20).optional(),
+  archetype: z.enum(HOOK_ARCHETYPES).optional(),
+});
+
+const hooksResponseSchema = z.object({
+  hooks: z
+    .array(
+      z.object({
+        text: z.string().min(8).max(200),
+        archetype: z.enum(HOOK_ARCHETYPES),
+        score: z.number().min(0).max(1).optional(),
+        why: z.string().max(180).optional(),
+      }),
+    )
+    .min(1)
+    .max(20),
+});
+
+router.post(
+  '/tenant/intelligence/hooks',
+  asyncHandler(async (req, res) => {
+    const orgId = req.tenant!.organizationId;
+    const body = hooksRequestSchema.parse(req.body ?? {});
+    const count = body.count ?? 6;
+
+    const org = await getOrgById(orgId);
+    if (!org) throw new AppError('Org missing', { status: 500, code: 'ORG_MISSING' });
+    const brand = await loadBrandProfile(orgId, null);
+    const history = await getRecentHistory(orgId, 10);
+
+    const archetypeLine = body.archetype
+      ? `Generate ${count} hooks using the ${body.archetype} archetype.`
+      : `Generate ${count} hooks. Rotate archetypes — at least 3 different archetypes across the set.`;
+
+    const system = [
+      'You write viral Instagram carousel hooks. You return ONLY JSON.',
+      `BRAND VOICE: niche=${brand.niche || 'general'}, tone=${brand.tone || 'direct'}, ${brand.voiceKeywords.length ? `keywords=${brand.voiceKeywords.slice(0, 5).join(', ')}` : ''}${brand.voiceAvoid.length ? `, avoid=${brand.voiceAvoid.slice(0, 5).join(', ')}` : ''}`,
+      'Rules:',
+      ' - Every hook is one sentence, ≤16 words.',
+      ' - NEVER invent precise statistics. Defensible ranges only ("~70%", "2 in 3", "roughly").',
+      ' - Pattern-interrupt. Specific verbs. No fluff openers ("let\'s talk", "imagine if").',
+      ' - Address the viewer as "you".',
+      ' - Each hook gets a confidence score 0-1 reflecting how scroll-stopping it is.',
+      history.recentHooks.length
+        ? `AVOID repeating these recent hooks: ${history.recentHooks.slice(0, 6).map((h) => `"${h}"`).join(' | ')}`
+        : '',
+      '',
+      `ARCHETYPES (use as the "archetype" field): ${HOOK_ARCHETYPES.join(', ')}`,
+    ]
+      .filter(Boolean)
+      .join('\n');
+
+    const user = [
+      `TOPIC: ${body.topic}`,
+      '',
+      archetypeLine,
+      '',
+      'Return ONLY: { "hooks": [{ "text": "...", "archetype": "...", "score": 0.0-1.0, "why": "..." }] }',
+    ].join('\n');
+
+    const result = await completeJsonRouted(
+      { system, user, schema: hooksResponseSchema, temperature: 0.9, maxTokens: 1500 },
+      { tier: 'fast', cacheEnabled: false },
+    );
+    log.info({ orgId, count: result.hooks.length }, 'hooks generated');
+    res.json(result);
+  }),
+);
+
+/* ============================================================
+ *  /topics/score — score one or more proposed topics on SEO + engagement.
+ * ============================================================ */
+
+const topicScoreRequestSchema = z.object({
+  topics: z.array(z.string().min(2).max(300)).min(1).max(20),
+});
+
+const topicScoreResponseSchema = z.object({
+  scored: z
+    .array(
+      z.object({
+        topic: z.string(),
+        seo_score: z.number().min(0).max(1),
+        engagement_score: z.number().min(0).max(1),
+        virality_score: z.number().min(0).max(1),
+        audience_fit: z.number().min(0).max(1),
+        rationale: z.string().max(220),
+        suggested_archetype: z.enum(HOOK_ARCHETYPES).optional(),
+      }),
+    )
+    .min(1),
+});
+
+router.post(
+  '/tenant/intelligence/topics/score',
+  asyncHandler(async (req, res) => {
+    const orgId = req.tenant!.organizationId;
+    const body = topicScoreRequestSchema.parse(req.body ?? {});
+    const brand = await loadBrandProfile(orgId, null);
+
+    const system = [
+      'You are a content strategist scoring carousel topics for an SMB Instagram account.',
+      `BRAND: niche=${brand.niche || 'general business'}, tone=${brand.tone || 'direct'}, audience reads on mobile.`,
+      'Score each topic on FOUR dimensions, each 0.0–1.0:',
+      ' - seo_score: how searchable / discoverable the topic is (long-tail keyword density).',
+      ' - engagement_score: how likely it is to drive saves/comments/shares.',
+      ' - virality_score: how likely it is to break out beyond the existing audience.',
+      ' - audience_fit: how aligned it is with this specific brand\'s niche + voice.',
+      'Be honest — most topics should land 0.3–0.7. Reserve 0.85+ for genuinely strong picks.',
+      'Suggest one hook archetype that would suit the topic from this set: ' + HOOK_ARCHETYPES.join(', '),
+    ].join('\n');
+
+    const user = [
+      'TOPICS TO SCORE:',
+      ...body.topics.map((t, i) => `${i + 1}. ${t}`),
+      '',
+      'Return: { "scored": [{ "topic": "...", "seo_score": 0.0, "engagement_score": 0.0, "virality_score": 0.0, "audience_fit": 0.0, "rationale": "...", "suggested_archetype": "..." }] }',
+    ].join('\n');
+
+    const result = await completeJsonRouted(
+      { system, user, schema: topicScoreResponseSchema, temperature: 0.4, maxTokens: 2200 },
+      { tier: 'balanced', cacheEnabled: true },
+    );
+    res.json(result);
+  }),
+);
+
+/* ============================================================
+ *  /insights — AI cards for the Dashboard + Library.
+ *  Reads cached cards from the ai_insights table, refreshes if stale.
+ * ============================================================ */
+
+router.get(
+  '/tenant/intelligence/insights',
+  asyncHandler(async (req, res) => {
+    const orgId = req.tenant!.organizationId;
+    const surface = (req.query.surface as string) || 'dashboard';
+
+    const { data, error } = await supabase
+      .from('ai_insights')
+      .select('id, kind, headline, body, cta_label, cta_href, score, created_at')
+      .eq('organization_id', orgId)
+      .eq('surface', surface)
+      .is('dismissed_at', null)
+      .gt('expires_at', new Date().toISOString())
+      .order('score', { ascending: false })
+      .limit(3);
+    if (error) throw new AppError(error.message, { status: 500, code: 'INSIGHTS_FETCH' });
+    res.json({ insights: data ?? [] });
+  }),
+);
+
+router.post(
+  '/tenant/intelligence/insights/:id/dismiss',
+  asyncHandler(async (req, res) => {
+    const orgId = req.tenant!.organizationId;
+    await supabase
+      .from('ai_insights')
+      .update({ dismissed_at: new Date().toISOString() })
+      .eq('organization_id', orgId)
+      .eq('id', req.params.id);
+    res.json({ ok: true });
+  }),
+);
+
+/* ============================================================
+ *  /memory/recall — for the personalization loop.
+ *  Returns top-performing hooks/themes/CTAs for the current brand,
+ *  ranked by engagement_rate from content_performance.
+ * ============================================================ */
+
+router.get(
+  '/tenant/intelligence/memory/recall',
+  asyncHandler(async (req, res) => {
+    const orgId = req.tenant!.organizationId;
+
+    const { data: perf } = await supabase
+      .from('content_performance')
+      .select('hook_archetype, style_mode_key, cta_style, engagement_rate, recorded_at')
+      .eq('organization_id', orgId)
+      .order('engagement_rate', { ascending: false })
+      .limit(50);
+
+    // Aggregate by category.
+    const byHook: Record<string, { n: number; avg: number }> = {};
+    const byStyle: Record<string, { n: number; avg: number }> = {};
+    const byCta: Record<string, { n: number; avg: number }> = {};
+    for (const row of perf ?? []) {
+      const r = row.engagement_rate ?? 0;
+      if (row.hook_archetype) {
+        const k = row.hook_archetype;
+        const b = byHook[k] ?? { n: 0, avg: 0 };
+        byHook[k] = { n: b.n + 1, avg: (b.avg * b.n + r) / (b.n + 1) };
+      }
+      if (row.style_mode_key) {
+        const k = row.style_mode_key;
+        const b = byStyle[k] ?? { n: 0, avg: 0 };
+        byStyle[k] = { n: b.n + 1, avg: (b.avg * b.n + r) / (b.n + 1) };
+      }
+      if (row.cta_style) {
+        const k = row.cta_style;
+        const b = byCta[k] ?? { n: 0, avg: 0 };
+        byCta[k] = { n: b.n + 1, avg: (b.avg * b.n + r) / (b.n + 1) };
+      }
+    }
+
+    const ranked = (m: typeof byHook) =>
+      Object.entries(m)
+        .map(([k, v]) => ({ key: k, sample_size: v.n, avg_engagement: Number(v.avg.toFixed(4)) }))
+        .sort((a, b) => b.avg_engagement - a.avg_engagement);
+
+    res.json({
+      sample_size: perf?.length ?? 0,
+      top_hooks: ranked(byHook).slice(0, 5),
+      top_styles: ranked(byStyle).slice(0, 5),
+      top_ctas: ranked(byCta).slice(0, 5),
+    });
+  }),
+);
+
+/* ============================================================
+ *  /command — Cmd-K palette intent → action.
+ *  Returns a structured action the frontend can execute (route, generate,
+ *  rewrite, etc.). The frontend never gets API keys; it just calls
+ *  whichever endpoint the action points to.
+ * ============================================================ */
+
+const commandRequestSchema = z.object({
+  input: z.string().min(1).max(500),
+});
+
+const commandResponseSchema = z.object({
+  action: z.enum([
+    'navigate',
+    'generate_topics',
+    'run_pipeline',
+    'rewrite_caption',
+    'switch_theme',
+    'show_insights',
+    'unknown',
+  ]),
+  args: z.record(z.string(), z.union([z.string(), z.number(), z.boolean()])).optional(),
+  reply: z.string().max(220),
+});
+
+router.post(
+  '/tenant/intelligence/command',
+  asyncHandler(async (req, res) => {
+    const orgId = req.tenant!.organizationId;
+    const body = commandRequestSchema.parse(req.body ?? {});
+    const started = Date.now();
+
+    const system = [
+      'You are the command interpreter for Flux. Map the user\'s natural-language input to ONE action.',
+      'Allowed actions:',
+      ' - navigate { path: string }                    — open a route (/dashboard, /library, /brand, /themes, /settings, /help)',
+      ' - generate_topics { count: number, theme?: string } — fill the topic queue',
+      ' - run_pipeline { topicId?: string }            — produce a new carousel',
+      ' - rewrite_caption { carouselId: string, style: string } — rewrite a caption',
+      ' - switch_theme { themeKey: string }            — switch brand theme',
+      ' - show_insights                                — open the AI insights panel',
+      ' - unknown                                      — if the input is unclear',
+      '',
+      'Return: { "action": "...", "args": { ... }, "reply": "short human-readable confirmation" }',
+      'If the user said something ambiguous, action=unknown and reply explains why.',
+    ].join('\n');
+
+    const result = await completeJsonRouted(
+      {
+        system,
+        user: `Input: "${body.input}"`,
+        schema: commandResponseSchema,
+        temperature: 0.2,
+        maxTokens: 400,
+      },
+      { tier: 'fast', cacheEnabled: false },
+    );
+
+    // Best-effort log to command_history.
+    void supabase.from('command_history').insert({
+      organization_id: orgId,
+      raw_input: body.input,
+      parsed_action: result.action,
+      arguments: result.args ?? {},
+      succeeded: true,
+      latency_ms: Date.now() - started,
+    });
+
+    res.json(result);
+  }),
+);
+
+/* ============================================================
+ *  /workspace-mode — get/set the active workspace mode
+ *  (creator / campaign / motion / strategy / analytics).
+ * ============================================================ */
+
+const WORKSPACE_MODES = ['creator', 'campaign', 'motion', 'strategy', 'analytics'] as const;
+type WorkspaceMode = typeof WORKSPACE_MODES[number];
+
+router.get(
+  '/tenant/intelligence/workspace-mode',
+  asyncHandler(async (req, res) => {
+    const orgId = req.tenant!.organizationId;
+    const { data } = await supabase
+      .from('workspace_modes')
+      .select('mode, metadata, updated_at')
+      .eq('organization_id', orgId)
+      .maybeSingle();
+    res.json({ mode: (data?.mode as WorkspaceMode) || 'creator', metadata: data?.metadata ?? {} });
+  }),
+);
+
+router.post(
+  '/tenant/intelligence/workspace-mode',
+  asyncHandler(async (req, res) => {
+    const orgId = req.tenant!.organizationId;
+    const mode = String(req.body?.mode ?? 'creator') as WorkspaceMode;
+    if (!WORKSPACE_MODES.includes(mode)) {
+      throw new ValidationError(`mode must be one of: ${WORKSPACE_MODES.join(', ')}`);
+    }
+    await supabase
+      .from('workspace_modes')
+      .upsert(
+        {
+          organization_id: orgId,
+          mode,
+          metadata: req.body?.metadata ?? {},
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: 'organization_id' },
+      );
+    res.json({ ok: true, mode });
+  }),
+);
+
+export default router;

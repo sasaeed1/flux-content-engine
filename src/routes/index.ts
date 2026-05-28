@@ -7,6 +7,7 @@ import edit from './edit.routes';
 import ops from './ops.routes';
 import webhooks from './webhooks.routes';
 import sso from './sso.routes';
+import intelligence from './intelligence.routes';
 
 const router = Router();
 
@@ -23,6 +24,7 @@ const api = Router();
 api.use(tenant);
 api.use(pipeline);
 api.use(edit);
+api.use(intelligence);
 api.use(ops);
 router.use('/api', api);
 

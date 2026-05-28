@@ -16,7 +16,12 @@
 import { supabase } from '../../lib/supabase';
 import { DatabaseError } from '../../lib/errors';
 
-/** Eight hook archetypes — the diversity engine rotates between these. */
+/**
+ * Fourteen hook archetypes — the viral diversity engine rotates between
+ * these. The first 8 are the original retention-focused set; the new 6
+ * (scarcity / controversy / future-prediction / anti-guru / data /
+ * comparison) cover scroll-stopping styles that work best for SMB content.
+ */
 export const HOOK_ARCHETYPES = [
   'curiosity',
   'fear',
@@ -26,6 +31,12 @@ export const HOOK_ARCHETYPES = [
   'contrarian',
   'educational',
   'list-style',
+  'scarcity',
+  'controversy',
+  'future-prediction',
+  'anti-guru',
+  'data-driven',
+  'comparison',
 ] as const;
 
 export type HookArchetype = (typeof HOOK_ARCHETYPES)[number];
@@ -60,6 +71,18 @@ const ARCHETYPE_GUIDANCE: Record<HookArchetype, string> = {
     'Promise a clean mental model the viewer didn\'t have 60 seconds ago. ("There are only 3 reasons people unfollow. Most brands break all 3.")',
   'list-style':
     'Open with the count + the kicker. The list should feel inevitable, not arbitrary. ("5 lines in your bio that quietly cost you followers.")',
+  scarcity:
+    'Frame a real, time-bound or quantity-bound loss the viewer faces if they don\'t act. No fake urgency. ("The 4 weeks before Eid: where 60% of your year happens.")',
+  controversy:
+    'Take a stance most of the niche disagrees with — but defensible. Pick a single concrete claim, not a vibe. ("Stop chasing virality. You don\'t need it to win.")',
+  'future-prediction':
+    'Make one specific, near-term prediction the viewer can verify. Anchor it to something already visible today. ("In 18 months, every SMB will have an AI receptionist. The early ones already do.")',
+  'anti-guru':
+    'Reverse a popular guru frame in plain language. Name the trope without naming people. ("\'10x your output\' is the dumbest piece of advice for solo founders.")',
+  'data-driven':
+    'Open with one defensible figure (range OK, never invent) and the takeaway in the same breath. ("We replied to 312 DMs last month. 9 turned into customers. The pattern repeats.")',
+  comparison:
+    'Set up A vs B with one sharp differentiator. The viewer should know which side they\'re on by the end of line one. ("Brands that reply in 5 minutes close 4x more than ones that reply in 24 hours.")',
 };
 
 export interface HistorySummary {

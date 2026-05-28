@@ -207,6 +207,92 @@ export const api = {
       json: { carouselIds, publishAt },
     }),
 
+  // ── intelligence layer (Phase 1) ──────────────────────────────────────
+  intelligence: {
+    providers: () =>
+      engineFetch<{
+        providers: Array<{
+          id: string;
+          priority: number;
+          configured: boolean;
+          keyCount: number;
+          dailyQuotaPerKey: number;
+        }>;
+        todayUsage: Array<{
+          provider: string;
+          key_index: number;
+          call_count: number;
+          token_count: number;
+        }>;
+      }>('/api/tenant/intelligence/providers'),
+    hooks: (body: {
+      topic: string;
+      count?: number;
+      archetype?: string;
+    }) =>
+      engineFetch<{
+        hooks: Array<{ text: string; archetype: string; score?: number; why?: string }>;
+      }>('/api/tenant/intelligence/hooks', { method: 'POST', json: body }),
+    scoreTopics: (topics: string[]) =>
+      engineFetch<{
+        scored: Array<{
+          topic: string;
+          seo_score: number;
+          engagement_score: number;
+          virality_score: number;
+          audience_fit: number;
+          rationale: string;
+          suggested_archetype?: string;
+        }>;
+      }>('/api/tenant/intelligence/topics/score', {
+        method: 'POST',
+        json: { topics },
+      }),
+    insights: (surface = 'dashboard') =>
+      engineFetch<{
+        insights: Array<{
+          id: string;
+          kind: string;
+          headline: string;
+          body: string | null;
+          cta_label: string | null;
+          cta_href: string | null;
+          score: number;
+          created_at: string;
+        }>;
+      }>(`/api/tenant/intelligence/insights?surface=${surface}`),
+    dismissInsight: (id: string) =>
+      engineFetch<{ ok: true }>(
+        `/api/tenant/intelligence/insights/${id}/dismiss`,
+        { method: 'POST', json: {} },
+      ),
+    recall: () =>
+      engineFetch<{
+        sample_size: number;
+        top_hooks: Array<{ key: string; sample_size: number; avg_engagement: number }>;
+        top_styles: Array<{ key: string; sample_size: number; avg_engagement: number }>;
+        top_ctas: Array<{ key: string; sample_size: number; avg_engagement: number }>;
+      }>('/api/tenant/intelligence/memory/recall'),
+    command: (input: string) =>
+      engineFetch<{
+        action: string;
+        args?: Record<string, string | number | boolean>;
+        reply: string;
+      }>('/api/tenant/intelligence/command', {
+        method: 'POST',
+        json: { input },
+      }),
+    getMode: () =>
+      engineFetch<{ mode: string; metadata: Record<string, unknown> }>(
+        '/api/tenant/intelligence/workspace-mode',
+      ),
+    setMode: (mode: string) =>
+      engineFetch<{ ok: true; mode: string }>(
+        '/api/tenant/intelligence/workspace-mode',
+        { method: 'POST', json: { mode } },
+      ),
+  },
+
   // Brand kit
   listBrandAssets: () =>
     engineFetch<{

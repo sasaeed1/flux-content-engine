@@ -33,7 +33,7 @@ const schema = z.object({
   SUPABASE_RENDER_BUCKET: z.string().default('content-renders'),
   SUPABASE_LOGO_BUCKET: z.string().default('brand-logos'),
 
-  // ----- LLM provider -----
+  // ----- LLM provider — primary (legacy single-provider path) -----
   AI_PROVIDER: z.enum(['groq', 'openai', 'ollama']).default('groq'),
   GROQ_API_KEY: z.string().default(''),
   GROQ_MODEL: z.string().default('llama-3.3-70b-versatile'),
@@ -41,6 +41,39 @@ const schema = z.object({
   OPENAI_MODEL: z.string().default('gpt-4o-mini'),
   OLLAMA_BASE_URL: z.string().default('http://localhost:11434'),
   OLLAMA_MODEL: z.string().default('qwen2.5:7b'),
+
+  // ----- multi-provider router (Phase 1) -----
+  // Each entry is a comma-separated list of API keys for round-robin rotation
+  // across multiple free-tier accounts on the same provider. Empty = disabled.
+  GROQ_API_KEYS: z.string().default(''),         // comma-separated, supplement to GROQ_API_KEY
+  OPENROUTER_API_KEYS: z.string().default(''),
+  OPENROUTER_MODEL_FAST: z.string().default('meta-llama/llama-3.1-8b-instruct:free'),
+  OPENROUTER_MODEL_REASONING: z.string().default('meta-llama/llama-3.1-70b-instruct:free'),
+  GEMINI_API_KEYS: z.string().default(''),
+  GEMINI_MODEL_FAST: z.string().default('gemini-2.0-flash-exp'),
+  GEMINI_MODEL_REASONING: z.string().default('gemini-2.0-flash-thinking-exp-1219'),
+  HUGGINGFACE_API_KEYS: z.string().default(''),
+  HUGGINGFACE_MODEL_FAST: z.string().default('meta-llama/Llama-3.2-3B-Instruct'),
+  HUGGINGFACE_MODEL_REASONING: z.string().default('meta-llama/Llama-3.1-70B-Instruct'),
+  CLOUDFLARE_AI_ACCOUNT_ID: z.string().default(''),
+  CLOUDFLARE_AI_API_KEYS: z.string().default(''),
+  CLOUDFLARE_AI_MODEL_FAST: z.string().default('@cf/meta/llama-3.1-8b-instruct'),
+  CLOUDFLARE_AI_MODEL_REASONING: z.string().default('@cf/meta/llama-3.1-70b-instruct'),
+  TOGETHER_API_KEYS: z.string().default(''),
+  TOGETHER_MODEL_FAST: z.string().default('meta-llama/Llama-3.2-3B-Instruct-Turbo'),
+  TOGETHER_MODEL_REASONING: z.string().default('meta-llama/Meta-Llama-3.1-70B-Instruct-Turbo'),
+
+  // ----- response cache (Phase 1) -----
+  ENABLE_RESPONSE_CACHE: asBool(true),
+  CACHE_TTL_SECONDS: asNum(60 * 60 * 24 * 14), // 14d default
+  // Soft caps for sliding-window quota tracking (per-key, per-day).
+  // Conservative defaults below each provider's published free tier.
+  QUOTA_DAILY_GROQ: asNum(14000),
+  QUOTA_DAILY_OPENROUTER: asNum(180),
+  QUOTA_DAILY_GEMINI: asNum(1400),
+  QUOTA_DAILY_HUGGINGFACE: asNum(900),
+  QUOTA_DAILY_CLOUDFLARE: asNum(9000),
+  QUOTA_DAILY_TOGETHER: asNum(60),
 
   // ----- image provider -----
   IMAGE_PROVIDER: z.enum(['none', 'openai', 'comfyui', 'fal']).default('none'),
