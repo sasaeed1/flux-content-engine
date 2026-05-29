@@ -19,6 +19,7 @@ import { cn } from '@/lib/utils';
 // Primary nav (top of sidebar) — the daily-driver routes.
 const navPrimary = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { href: '/studio', label: 'Studio', icon: Wand2 },
   { href: '/library', label: 'Library', icon: Images },
   { href: '/brand', label: 'Brand', icon: Sparkles },
   { href: '/themes', label: 'Themes', icon: Palette },
@@ -30,7 +31,7 @@ const navSecondary = [
   { href: '/help', label: 'Help', icon: LifeBuoy },
 ];
 
-export function Sidebar() {
+export function Sidebar({ topSlot }: { topSlot?: React.ReactNode } = {}) {
   const pathname = usePathname();
 
   const renderItem = (item: { href: string; label: string; icon: typeof LayoutDashboard }) => {
@@ -69,6 +70,7 @@ export function Sidebar() {
           <Logo />
         </Link>
       </div>
+      {topSlot}
       <nav className="flex-1 space-y-1 px-3 py-2">
         {navPrimary.map(renderItem)}
         <div className="my-3 mx-3 h-px bg-border/60" />

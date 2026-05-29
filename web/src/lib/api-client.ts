@@ -261,6 +261,30 @@ export const api = {
           created_at: string;
         }>;
       }>(`/api/tenant/intelligence/insights?surface=${surface}`),
+    refreshInsights: () =>
+      engineFetch<{ ok: true; inserted: number }>(
+        '/api/tenant/intelligence/insights/refresh',
+        { method: 'POST', json: {} },
+      ),
+    styles: () =>
+      engineFetch<{
+        styles: Array<{
+          id: string;
+          key: string;
+          name: string;
+          category: string;
+          description: string;
+          emotional_tone: string;
+          typography: Record<string, unknown>;
+          palette: Record<string, string | string[]>;
+          layout: Record<string, unknown>;
+          motion: Record<string, unknown>;
+          effects: Record<string, unknown>;
+          preview_url: string | null;
+          is_system: boolean;
+          is_premium: boolean;
+        }>;
+      }>('/api/tenant/intelligence/styles'),
     dismissInsight: (id: string) =>
       engineFetch<{ ok: true }>(
         `/api/tenant/intelligence/insights/${id}/dismiss`,

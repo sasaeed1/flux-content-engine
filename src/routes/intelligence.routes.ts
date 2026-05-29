@@ -339,6 +339,44 @@ router.post(
 );
 
 /* ============================================================
+ *  /styles — list every system style mode + the org's custom ones.
+ *  This powers the Studio's 40-mode picker.
+ * ============================================================ */
+
+router.get(
+  '/tenant/intelligence/styles',
+  asyncHandler(async (req, res) => {
+    const orgId = req.tenant!.organizationId;
+    const { data, error } = await supabase
+      .from('style_modes')
+      .select(
+        'id, key, name, category, description, emotional_tone, layout, typography, palette, motion, effects, preview_url, is_system, is_premium',
+      )
+      .or(`organization_id.eq.${orgId},organization_id.is.null`)
+      .order('is_system', { ascending: false })
+      .order('category')
+      .order('name');
+    if (error) throw new AppError(error.message, { status: 500, code: 'STYLES_FETCH' });
+    res.json({ styles: data ?? [] });
+  }),
+);
+
+/* ============================================================
+ *  /insights/refresh — manually regenerate insight cards for this org.
+ *  The scheduler also runs this periodically.
+ * ============================================================ */
+
+router.post(
+  '/tenant/intelligence/insights/refresh',
+  asyncHandler(async (req, res) => {
+    const orgId = req.tenant!.organizationId;
+    const { generateInsightsForOrg } = await import('../modules/intelligence/insightsGenerator');
+    const inserted = await generateInsightsForOrg(orgId);
+    res.json({ ok: true, inserted });
+  }),
+);
+
+/* ============================================================
  *  /workspace-mode — get/set the active workspace mode
  *  (creator / campaign / motion / strategy / analytics).
  * ============================================================ */
