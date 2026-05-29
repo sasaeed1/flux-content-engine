@@ -6,6 +6,7 @@ import { createServer } from './server';
 import { startScheduler, stopScheduler } from './scheduler/scheduler';
 import { ensureBuckets } from './lib/storage';
 import { shutdownRenderer } from './modules/render/htmlRenderer';
+import { seedSystemStyleModes } from './modules/styles/seedOnBoot';
 import { logger } from './lib/logger';
 import { toErrorMessage } from './lib/errors';
 
@@ -19,6 +20,14 @@ async function main(): Promise<void> {
     await ensureBuckets();
   } catch (err) {
     logger.error({ error: toErrorMessage(err) }, 'Storage bucket provisioning failed — continuing');
+  }
+
+  // Auto-seed the 40 system style modes if the phase1 migration has been
+  // applied. Silently no-ops if the table doesn't exist yet.
+  try {
+    await seedSystemStyleModes();
+  } catch (err) {
+    logger.warn({ error: toErrorMessage(err) }, 'style-mode auto-seed failed — continuing');
   }
 
   const app = createServer();
