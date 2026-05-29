@@ -14,6 +14,7 @@ import { DEFAULT_SLIDE_DIMS } from '../../config/constants';
 import { childLogger } from '../../lib/logger';
 import { renderHtmlToPng } from './htmlRenderer';
 import { getHtmlRenderer } from './templates';
+import type { StyleModeOverlay } from './templates/minimal';
 import type {
   BrandProfile,
   RenderedSlide,
@@ -29,6 +30,8 @@ export interface ComposeInput {
   brand: BrandProfile;
   template: Template;
   slides: SlideContent[];
+  /** Optional style mode overlay — overrides brand theme visuals. */
+  styleMode?: StyleModeOverlay | null;
 }
 
 export async function composeSlides(input: ComposeInput): Promise<RenderedSlide[]> {
@@ -47,6 +50,7 @@ export async function composeSlides(input: ComposeInput): Promise<RenderedSlide[
       height: dims.height,
       slideIndex: slide.index,
       totalSlides: total,
+      styleMode: input.styleMode ?? null,
     });
 
     const png = await renderHtmlToPng(html, dims);

@@ -26,6 +26,7 @@ export async function generateFromStudioAction(input: {
   const res = (await api.runPipeline({
     brandProfileId: brandId ?? undefined,
     approvalMode: 'manual',
+    styleModeKey: input.themeKey ?? undefined,
   })) as { runId?: string; carouselId?: string; imageUrls?: string[] };
 
   revalidatePath('/studio');

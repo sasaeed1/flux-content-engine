@@ -40,6 +40,10 @@ router.post(
       postType: typeof body.postType === 'string' ? (body.postType as PostType) : undefined,
       publishAt: typeof body.publishAt === 'string' ? body.publishAt : undefined,
       approvalMode: body.approvalMode === 'manual' ? 'manual' : 'auto',
+      styleModeKey:
+        typeof body.styleModeKey === 'string' && body.styleModeKey.length > 0
+          ? body.styleModeKey
+          : undefined,
     };
     const result = await runPipeline(opts);
     res.json(result);

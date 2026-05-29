@@ -15,6 +15,41 @@
  */
 import type { BrandProfile, SlideContent } from '../../../types';
 
+/**
+ * Optional style mode overlay — when supplied, its typography + palette
+ * replace the brand theme defaults. Lets the studio's 40-mode picker
+ * actually drive the renderer.
+ */
+export interface StyleModeOverlay {
+  typography?: {
+    primary?: string;
+    display?: string;
+    weight_body?: number;
+    weight_display?: number;
+    hook_size?: number;
+    body_size?: number;
+    tracking?: string;
+  };
+  palette?: {
+    background?: string;
+    foreground?: string;
+    muted?: string;
+    accent?: string;
+    accent_soft?: string;
+    gradient?: string[];
+  };
+  layout?: {
+    padding?: 'tight' | 'standard' | 'generous' | 'luxurious';
+    grid?: string;
+  };
+  effects?: {
+    grain?: number;
+    glow?: number;
+    vignette?: number;
+    blur?: number;
+  };
+}
+
 export interface RenderSlideArgs {
   htmlTemplate: string;    // 'minimal-carousel' | 'minimal-quote' | 'minimal-single'
   layout: string;
@@ -24,6 +59,7 @@ export interface RenderSlideArgs {
   height: number;
   slideIndex?: number;     // 0-based
   totalSlides?: number;
+  styleMode?: StyleModeOverlay | null;
 }
 
 /* ------------------------------- helpers ------------------------------- */
@@ -64,45 +100,89 @@ function fontFamily(name: string | undefined, fallback: string): string {
 }
 
 function baseCss(args: RenderSlideArgs): string {
+  // The style mode overlay takes precedence over the brand theme. Brand still
+  // wins for anything the style doesn't specify (logo/handle/etc.).
+  const smTyp = args.styleMode?.typography ?? {};
+  const smPal = args.styleMode?.palette ?? {};
+  const smEffects = args.styleMode?.effects ?? {};
+
   const c = args.brand.theme.colors;
   const t = args.brand.theme.typography;
-  const fontDisplay = fontFamily(t.fontDisplay, 'Inter, sans-serif');
-  const fontPrimary = fontFamily(t.fontPrimary, 'Inter, sans-serif');
-  const accentSoft = c.accentSoft ?? c.accent;
+  const bg = smPal.background ?? c.background;
+  const fg = smPal.foreground ?? c.foreground;
+  const muted = smPal.muted ?? c.muted ?? c.foreground;
+  const accent = smPal.accent ?? c.accent;
+  const accentSoft = smPal.accent_soft ?? c.accentSoft ?? accent;
+  const grad =
+    Array.isArray(smPal.gradient) && smPal.gradient.length >= 2
+      ? `linear-gradient(135deg, ${smPal.gradient.join(', ')})`
+      : null;
+
+  const fontDisplay = fontFamily(smTyp.display ?? t.fontDisplay, 'Inter, sans-serif');
+  const fontPrimary = fontFamily(smTyp.primary ?? t.fontPrimary, 'Inter, sans-serif');
+  const sizeHook = smTyp.hook_size ?? t.sizeHook ?? 88;
+  const sizeBody = smTyp.body_size ?? t.sizeBody ?? 40;
+  const weightDisplay = smTyp.weight_display ?? t.weightDisplay ?? 900;
+  const weightBody = smTyp.weight_body ?? t.weightBody ?? 500;
+  const tracking = smTyp.tracking ?? '-0.02em';
+
+  const paddingMap = {
+    tight: '64px 56px',
+    standard: '90px 80px',
+    generous: '120px 96px',
+    luxurious: '160px 120px',
+  } as const;
+  const pad = paddingMap[args.styleMode?.layout?.padding ?? 'standard'];
 
   return `
     :root {
-      --bg: ${c.background};
-      --fg: ${c.foreground};
-      --muted: ${c.muted ?? c.foreground};
-      --accent: ${c.accent};
+      --bg: ${bg};
+      --fg: ${fg};
+      --muted: ${muted};
+      --accent: ${accent};
       --accent-soft: ${accentSoft};
       --font-display: ${fontDisplay};
       --font-primary: ${fontPrimary};
-      --size-hook: ${t.sizeHook ?? 88}px;
-      --size-body: ${t.sizeBody ?? 40}px;
-      --weight-display: ${t.weightDisplay ?? 900};
-      --weight-body: ${t.weightBody ?? 500};
+      --size-hook: ${sizeHook}px;
+      --size-body: ${sizeBody}px;
+      --weight-display: ${weightDisplay};
+      --weight-body: ${weightBody};
+      --tracking: ${tracking};
     }
     * { box-sizing: border-box; }
     html, body { margin: 0; padding: 0; }
     body {
       width: ${args.width}px;
       height: ${args.height}px;
-      background: var(--bg);
+      background: ${grad ?? 'var(--bg)'};
       color: var(--fg);
       font-family: var(--font-primary);
       font-weight: var(--weight-body);
       -webkit-font-smoothing: antialiased;
       text-rendering: optimizeLegibility;
+      position: relative;
     }
+    ${smEffects.vignette ? `
+    body::after {
+      content: ''; position: absolute; inset: 0;
+      background: radial-gradient(ellipse at center, transparent 40%, rgba(0,0,0,${(smEffects.vignette ?? 0).toFixed(2)}) 100%);
+      pointer-events: none;
+    }` : ''}
+    ${smEffects.grain ? `
+    body::before {
+      content: ''; position: absolute; inset: 0;
+      background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%25' height='100%25' filter='url(%23n)' opacity='${(smEffects.grain ?? 0).toFixed(2)}'/></svg>");
+      mix-blend-mode: overlay;
+      pointer-events: none;
+    }` : ''}
     .slide {
       position: relative;
       width: 100%; height: 100%;
-      padding: 90px 80px;
+      padding: ${pad};
       display: flex; flex-direction: column;
       justify-content: center; align-items: center;
       text-align: center;
+      z-index: 1;
     }
     .slide.left { align-items: flex-start; text-align: left; }
     .hook {
@@ -110,7 +190,7 @@ function baseCss(args: RenderSlideArgs): string {
       font-weight: var(--weight-display);
       font-size: var(--size-hook);
       line-height: 1.04;
-      letter-spacing: -0.02em;
+      letter-spacing: var(--tracking);
       text-transform: uppercase;
     }
     .title {
@@ -219,11 +299,50 @@ function baseCss(args: RenderSlideArgs): string {
   `;
 }
 
-const FONT_LINK = `
+/**
+ * Build a Google Fonts URL that covers all the typefaces the 40 style modes
+ * might use. We over-fetch slightly — but it's CSS, the browser caches, and
+ * Puppeteer only loads once per render run.
+ */
+function fontLinkFor(args: RenderSlideArgs): string {
+  // Pull the fonts the style mode + brand want.
+  const wantedRaw: string[] = [];
+  const smTyp = args.styleMode?.typography ?? {};
+  if (smTyp.display) wantedRaw.push(String(smTyp.display));
+  if (smTyp.primary) wantedRaw.push(String(smTyp.primary));
+  if (args.brand.theme.typography.fontDisplay) wantedRaw.push(String(args.brand.theme.typography.fontDisplay));
+  if (args.brand.theme.typography.fontPrimary) wantedRaw.push(String(args.brand.theme.typography.fontPrimary));
+
+  const SYSTEM = new Set(['SF Pro Display', 'Helvetica', '-apple-system']);
+  const wanted = new Set(
+    wantedRaw
+      .map((f) => f.replace(/"/g, '').trim())
+      .filter((f) => f.length > 0 && !SYSTEM.has(f)),
+  );
+  // Always available defaults.
+  wanted.add('Inter');
+  wanted.add('Playfair Display');
+  wanted.add('JetBrains Mono');
+  // Add common style-mode fonts so any seeded mode renders correctly.
+  wanted.add('Cormorant Garamond');
+  wanted.add('EB Garamond');
+  wanted.add('Space Grotesk');
+  wanted.add('Bebas Neue');
+  wanted.add('IBM Plex Mono');
+  wanted.add('Roboto Slab');
+  wanted.add('Roboto Condensed');
+  wanted.add('Bodoni Moda');
+  wanted.add('Noto Serif JP');
+
+  const families = [...wanted]
+    .map((f) => `family=${encodeURIComponent(f).replace(/%20/g, '+')}:wght@400;500;600;700;800;900`)
+    .join('&');
+  return `
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@500;600;700;800;900&family=Playfair+Display:wght@700;900&family=JetBrains+Mono:wght@500;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?${families}&display=swap" rel="stylesheet">
 `;
+}
 
 /* ------------------------------- layouts ------------------------------- */
 
@@ -356,7 +475,7 @@ export function renderSlide(args: RenderSlideArgs): string {
   return `<!doctype html>
 <html><head>
 <meta charset="utf-8">
-${FONT_LINK}
+${fontLinkFor(args)}
 <style>${baseCss(args)}</style>
 </head>
 <body>

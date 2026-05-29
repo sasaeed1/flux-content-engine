@@ -191,6 +191,8 @@ export interface PipelineOptions {
   postType?: PostType;
   publishAt?: string;
   approvalMode?: 'auto' | 'manual';
+  /** Optional style mode key from `style_modes.key` — Studio passes this through. */
+  styleModeKey?: string;
   suppressFailureLog?: boolean;
 }
 

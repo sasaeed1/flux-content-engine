@@ -114,6 +114,7 @@ export const api = {
     templateKey?: string;
     postType?: string;
     approvalMode?: 'auto' | 'manual';
+    styleModeKey?: string;
   }) => engineFetch<unknown>('/api/tenant/pipeline/run', { method: 'POST', json: body }),
 
   recentRuns: (limit = 8) =>

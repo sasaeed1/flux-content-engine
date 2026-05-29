@@ -37,6 +37,7 @@ import {
 import { generateCarouselContent } from '../modules/content/carouselContentService';
 import { generateSinglePostContent } from '../modules/content/singlePostContentService';
 import { composeSlides } from '../modules/render/composer';
+import { loadStyleMode } from '../modules/styles/loader';
 import { resolveInstagramAccount } from '../modules/publish/accountService';
 import { logFailure } from '../modules/logging/failureLogger';
 import { PIPELINE_STEPS, type PipelineStep } from '../config/constants';
@@ -201,6 +202,10 @@ export async function runPipeline(options: PipelineOptions): Promise<PipelineRes
     // (image-gen step intentionally skipped on the IMAGE_PROVIDER=none path)
     await step('images', async () => 'skipped');
 
+    // Load the style mode if one was requested. Null when none, in which
+    // case the renderer falls back to the brand theme defaults.
+    const styleMode = await loadStyleMode(org.id, options.styleModeKey);
+
     const rendered: RenderedSlide[] = await step('render', () =>
       composeSlides({
         orgId: org.id,
@@ -208,6 +213,7 @@ export async function runPipeline(options: PipelineOptions): Promise<PipelineRes
         brand,
         template,
         slides,
+        styleMode,
       }),
     );
 
