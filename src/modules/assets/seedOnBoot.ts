@@ -35,7 +35,10 @@ export async function seedSystemAssets(): Promise<{ inserted: number; skipped: n
     kind: a.kind,
     name: a.key,
     storage_path: null,
-    public_url: null,
+    // Schema column is `preview_url`, not `public_url`. Left NULL for
+    // code-backed assets — the renderer doesn't need a URL, it inlines
+    // the SVG via the in-code registry.
+    preview_url: null,
     metadata: {
       display_name: a.name,
       opacity: a.opacity ?? null,

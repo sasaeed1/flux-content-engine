@@ -403,7 +403,7 @@ router.get(
     const kind = typeof req.query.kind === 'string' ? req.query.kind : undefined;
     const q = supabase
       .from('asset_library')
-      .select('id, kind, name, storage_path, public_url, metadata, is_system, is_premium, created_at')
+      .select('id, kind, name, storage_path, preview_url, metadata, is_system, is_premium, created_at')
       .or(`organization_id.eq.${orgId},organization_id.is.null`)
       .order('is_system', { ascending: false })
       .order('kind')

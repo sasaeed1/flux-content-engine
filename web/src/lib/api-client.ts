@@ -376,7 +376,7 @@ export const api = {
         kind: string;
         name: string;
         storage_path: string | null;
-        public_url: string | null;
+        preview_url: string | null;
         metadata: Record<string, unknown>;
         is_system: boolean;
         is_premium: boolean;
