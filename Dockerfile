@@ -15,14 +15,22 @@ WORKDIR /app
 ENV NODE_ENV=production
 ENV CHROME_EXECUTABLE_PATH=/usr/bin/chromium
 
-# Chromium (for puppeteer-core) + libraries Sharp depends on + curl for healthcheck
+# Chromium (for puppeteer-core) + libraries Sharp depends on + curl for healthcheck.
+# ca-certificates is CRITICAL — without it every TLS handshake (Supabase + every
+# AI provider) silently fails. node:22-slim sometimes ships a stale/empty bundle.
 RUN apt-get update && apt-get install -y --no-install-recommends \
+      ca-certificates \
       chromium \
       fonts-liberation \
       fonts-noto-color-emoji \
       libnss3 libxss1 libasound2 libatk-bridge2.0-0 libgtk-3-0 libgbm1 \
       curl \
+    && update-ca-certificates \
     && rm -rf /var/lib/apt/lists/*
+
+# Also tell Node + axios to use the system CA bundle explicitly.
+ENV NODE_EXTRA_CA_CERTS=/etc/ssl/certs/ca-certificates.crt
+ENV SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
 
 COPY package.json ./
 RUN npm install --omit=dev --no-audit --no-fund
