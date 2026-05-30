@@ -53,7 +53,11 @@ export function StudioWrapper({
 
       {/* Right: assistant */}
       <aside className="order-3 rounded-2xl border border-border/40 bg-card/30 p-4 xl:max-h-[80vh] xl:overflow-y-auto">
-        <StudioAssistant initialInsights={insights} defaultTopic={topic} />
+        <StudioAssistant
+          initialInsights={insights}
+          defaultTopic={topic}
+          selectedStyle={styles.find((s) => s.key === selectedKey) ?? null}
+        />
       </aside>
     </div>
   );

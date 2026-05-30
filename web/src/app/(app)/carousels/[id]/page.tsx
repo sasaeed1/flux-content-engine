@@ -8,6 +8,7 @@ import { SlideStrip } from '@/components/carousel/slide-strip';
 import { ApprovalBar } from '@/components/carousel/approval-bar';
 import { CaptionEditor } from '@/components/carousel/caption-editor';
 import { CtaEditor } from '@/components/carousel/cta-editor';
+import { RestyleSwitcher } from '@/components/carousel/restyle-switcher';
 import { api } from '@/lib/api-client';
 import { fmtRelative } from '@/lib/format';
 
@@ -33,6 +34,19 @@ export default async function CarouselPage({
     carousel.status,
   );
 
+  // Post-audit #4 — load styles in parallel for the restyle switcher.
+  // Failure is non-blocking — the page still renders without the switcher.
+  let styleOptions: Array<{ key: string; name: string; category: string | null }> = [];
+  try {
+    const { styles } = await api.intelligence.styles();
+    styleOptions = styles.map((s) => ({ key: s.key, name: s.name, category: s.category }));
+  } catch {
+    /* leave empty */
+  }
+  const currentStyleModeKey =
+    ((carousel as unknown as { metadata?: { style_mode_key?: string } | null })
+      .metadata?.style_mode_key as string | undefined) ?? null;
+
   return (
     <div className="space-y-8 min-w-0">
       <Button variant="ghost" size="sm" asChild className="-ml-2 self-start">
@@ -50,9 +64,18 @@ export default async function CarouselPage({
         }
         subtitle={carousel.hook}
         actions={
-          <Badge variant="accent" className="self-start">
-            {carousel.status.replace(/_/g, ' ')}
-          </Badge>
+          <div className="flex flex-col items-end gap-2 sm:flex-row sm:items-center">
+            {editable && styleOptions.length > 0 && (
+              <RestyleSwitcher
+                carouselId={carousel.id}
+                currentStyleModeKey={currentStyleModeKey}
+                styles={styleOptions}
+              />
+            )}
+            <Badge variant="accent" className="self-start">
+              {carousel.status.replace(/_/g, ' ')}
+            </Badge>
+          </div>
         }
       />
 

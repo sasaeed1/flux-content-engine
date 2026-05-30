@@ -204,10 +204,29 @@ export const api = {
     idx: number,
     style: 'rewrite' | 'shorter' | 'denser' | 'rewrite-hook' | 'rewrite-cta',
   ) =>
-    engineFetch<{ ok: true; slides: unknown[] }>(
-      `/api/tenant/carousels/${id}/slides/${idx}/rewrite`,
-      { method: 'POST', json: { style } },
-    ),
+    engineFetch<{
+      ok: true;
+      slides: unknown[];
+      previous: { index: number; role: string; layout: string; data: Record<string, unknown> };
+      next: { index: number; role: string; layout: string; data: Record<string, unknown> };
+      style: string;
+    }>(`/api/tenant/carousels/${id}/slides/${idx}/rewrite`, {
+      method: 'POST',
+      json: { style },
+    }),
+
+  // Post-audit #4 — live theme reapply on an existing carousel (no full pipeline rerun)
+  restyleCarousel: (id: string, styleModeKey: string) =>
+    engineFetch<{
+      ok: true;
+      carouselId: string;
+      styleModeKey: string;
+      imageUrls: string[];
+      slides: Array<{ imageUrl?: string; storagePath?: string; [k: string]: unknown }>;
+    }>(`/api/tenant/carousels/${id}/restyle`, {
+      method: 'POST',
+      json: { styleModeKey },
+    }),
 
   // Bulk approve
   bulkApprove: (carouselIds: string[], publishAt?: string) =>

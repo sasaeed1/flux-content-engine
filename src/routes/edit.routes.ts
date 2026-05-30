@@ -20,6 +20,9 @@ import {
 import { loadBrandProfile } from '../modules/brand/brandService';
 import { resolveInstagramAccount } from '../modules/publish/accountService';
 import { enqueuePublish } from '../db/repositories';
+import { loadTemplate, defaultTemplateKeyForType } from '../modules/templates/templateService';
+import { loadStyleMode } from '../modules/styles/loader';
+import { composeSlides } from '../modules/render/composer';
 import {
   rewriteCaption,
   rewriteCta,
@@ -172,15 +175,110 @@ router.post(
     if (!org) throw new AppError('Organization vanished', { status: 500, code: 'ORG_MISSING' });
     const brand = await loadBrandProfile(orgId, carousel.brand_profile_id ?? null);
 
+    const previousSlide = slides[idx];
     const newSlide = await rewriteSlide({
       organization: org,
       brand,
-      slide: slides[idx],
+      slide: previousSlide,
       style,
     });
     const updated = await applySlideEdit(orgId, req.params.id, idx, newSlide);
     log.info({ carouselId: req.params.id, idx, style }, 'Slide rewritten');
-    res.json({ ok: true, slides: updated });
+    // Post-audit #4 — return `previous` and `next` so the UI can render a
+    // before/after diff. The full `slides` array is still returned for the
+    // existing callers that just refresh state.
+    res.json({
+      ok: true,
+      slides: updated,
+      previous: {
+        index: previousSlide.index,
+        role: previousSlide.role,
+        layout: previousSlide.layout,
+        data: previousSlide.data,
+      },
+      next: {
+        index: newSlide.index,
+        role: newSlide.role,
+        layout: newSlide.layout,
+        data: newSlide.data,
+      },
+      style,
+    });
+  }),
+);
+
+/* ----- Post-audit #4 — live theme reapply (no full pipeline rerun) ----- */
+// Re-renders an existing carousel's slides under a different style mode.
+// Skips: topic resolution, content generation, brand load — keeps the same
+// per-slide copy and only swaps the visual layer. Costs ~1 PNG per slide
+// instead of a fresh LLM call + every other step.
+
+router.post(
+  '/tenant/carousels/:id/restyle',
+  asyncHandler(async (req, res) => {
+    const orgId = req.tenant!.organizationId;
+    const carouselId = req.params.id;
+    const styleModeKey = typeof req.body?.styleModeKey === 'string' ? req.body.styleModeKey : null;
+    if (!styleModeKey) {
+      throw new ValidationError('Field "styleModeKey" is required');
+    }
+
+    const carousel = await getCarouselByIdScoped(orgId, carouselId);
+    if (!carousel) throw new NotFoundError(`Carousel ${carouselId} not found`);
+    const slides = (carousel.slides as SlideContent[] | null) ?? [];
+    if (slides.length === 0) {
+      throw new ValidationError('Carousel has no slides — cannot restyle');
+    }
+
+    const org = await getOrgById(orgId);
+    if (!org) throw new AppError('Organization vanished', { status: 500, code: 'ORG_MISSING' });
+    const brand = await loadBrandProfile(orgId, carousel.brand_profile_id ?? null);
+    // The carousel row stores a template_id; we don't strictly need it to
+    // re-render — the existing slides already carry the layout per slide.
+    // Pick the default carousel template (or single-post template) so the
+    // composer has a valid Template object.
+    const templateKey = defaultTemplateKeyForType('carousel');
+    const template = await loadTemplate(org.id, templateKey);
+    const styleMode = await loadStyleMode(orgId, styleModeKey);
+    if (!styleMode) {
+      throw new ValidationError(`Style mode "${styleModeKey}" not found`);
+    }
+
+    log.info({ carouselId, styleModeKey, slideCount: slides.length }, 'Restyling carousel');
+    const rendered = await composeSlides({
+      orgId,
+      runId: (carousel.run_id as string | null) ?? carouselId, // group new renders under the run if present
+      brand,
+      template,
+      slides,
+      styleMode,
+    });
+
+    // Persist new URLs back onto the carousel slides + bump style_mode_key
+    // in metadata so the performance rollup picks up the new style on
+    // subsequent analytics syncs.
+    const slidesWithUrls = slides.map((s, i) => ({
+      ...s,
+      imageUrl: rendered[i]?.publicUrl,
+      storagePath: rendered[i]?.storagePath,
+    }));
+    const oldMetadata = (carousel.metadata as Record<string, unknown> | null) ?? {};
+    await updateCarousel(orgId, carouselId, {
+      slides: slidesWithUrls as unknown as Record<string, unknown>,
+      metadata: {
+        ...oldMetadata,
+        style_mode_key: styleModeKey,
+        last_restyle_at: new Date().toISOString(),
+      } as Record<string, unknown>,
+    });
+
+    res.json({
+      ok: true,
+      carouselId,
+      styleModeKey,
+      slides: slidesWithUrls,
+      imageUrls: rendered.map((r) => r.publicUrl),
+    });
   }),
 );
 

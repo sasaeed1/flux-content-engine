@@ -50,3 +50,14 @@ export async function bulkApproveAction(carouselIds: string[], publishAt?: strin
   revalidatePath('/dashboard');
   return res;
 }
+
+// Post-audit #4 — live theme reapply on an existing carousel.
+// Re-renders every slide under the new style mode without re-running
+// content generation. Returns the new image URLs so the UI can swap
+// previews immediately.
+export async function restyleCarouselAction(id: string, styleModeKey: string) {
+  const res = await api.restyleCarousel(id, styleModeKey);
+  revalidatePath(`/carousels/${id}`);
+  revalidatePath('/library');
+  return res;
+}

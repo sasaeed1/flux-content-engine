@@ -11,6 +11,8 @@ import { useState, useTransition } from 'react';
 import { Loader2, Sparkles, Wand2, Zap, ArrowRight } from 'lucide-react';
 import Link from 'next/link';
 import { PresenceCards, type InsightCard } from '@/components/flux/presence-card';
+import { MotionPreview, type MotionStyleMode } from '@/components/flux/motion-preview';
+import type { StyleMode } from '@/components/flux/style-tile';
 import {
   dismissInsightAction,
   generateHooksAction,
@@ -27,9 +29,12 @@ interface HookOut {
 export function StudioAssistant({
   initialInsights,
   defaultTopic,
+  selectedStyle,
 }: {
   initialInsights: InsightCard[];
   defaultTopic?: string;
+  /** Post-audit #5 — when a style is picked in the browser, animate it here. */
+  selectedStyle?: StyleMode | null;
 }) {
   const [insights, setInsights] = useState<InsightCard[]>(initialInsights);
   const [hooks, setHooks] = useState<HookOut[]>([]);
@@ -72,8 +77,38 @@ export function StudioAssistant({
     });
   };
 
+  // Cast the picked StyleMode into the MotionStyleMode shape — the JSONB
+  // fields are loosely typed (Record<string, unknown>) but their content
+  // matches the renderer's overlay schema.
+  const motionStyle: MotionStyleMode | null = selectedStyle
+    ? ({
+        key: selectedStyle.key,
+        name: selectedStyle.name,
+        typography: selectedStyle.typography as MotionStyleMode['typography'],
+        palette: selectedStyle.palette as unknown as MotionStyleMode['palette'],
+        motion: selectedStyle.motion as MotionStyleMode['motion'],
+        effects: selectedStyle.effects as MotionStyleMode['effects'],
+      } satisfies MotionStyleMode)
+    : null;
+
   return (
     <div className="flex h-full flex-col gap-4">
+      {/* Motion preview — post-audit #5 */}
+      {motionStyle && (
+        <div>
+          <div className="mb-2 flex items-center justify-between">
+            <h3 className="text-[10px] font-bold uppercase tracking-[0.16em] text-muted-foreground">
+              Motion preview · {(motionStyle.motion?.philosophy ?? 'subtle').toUpperCase()}
+            </h3>
+            <span className="text-[10px] text-muted-foreground">loops every 5s</span>
+          </div>
+          <MotionPreview
+            style={motionStyle}
+            className="aspect-square w-full ring-1 ring-border/40"
+          />
+        </div>
+      )}
+
       {/* Insights */}
       <div>
         <div className="mb-2 flex items-center justify-between">
