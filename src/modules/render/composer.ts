@@ -32,6 +32,12 @@ export interface ComposeInput {
   slides: SlideContent[];
   /** Optional style mode overlay — overrides brand theme visuals. */
   styleMode?: StyleModeOverlay | null;
+  /**
+   * Optional callback fired after EACH slide is rendered + uploaded.
+   * Powers the Studio's live "slide N of M just landed" stream. Errors
+   * thrown by the callback are swallowed — the render loop must continue.
+   */
+  onSlideRendered?: (slide: RenderedSlide, totalSlides: number) => void;
 }
 
 export async function composeSlides(input: ComposeInput): Promise<RenderedSlide[]> {
@@ -62,14 +68,28 @@ export async function composeSlides(input: ComposeInput): Promise<RenderedSlide[
       contentType: 'image/png',
     });
 
-    results.push({
+    const rendered: RenderedSlide = {
       slideIndex: slide.index,
       storagePath: path,
       publicUrl,
       width: dims.width,
       height: dims.height,
       bytes: png.length,
-    });
+    };
+    results.push(rendered);
+
+    // Notify any streaming consumer. Wrapped because a thrown callback must
+    // never abort the render loop.
+    if (input.onSlideRendered) {
+      try {
+        input.onSlideRendered(rendered, total);
+      } catch (err) {
+        log.warn(
+          { runId: input.runId, slideIndex: rendered.slideIndex, err: (err as Error).message },
+          'onSlideRendered callback threw — ignoring',
+        );
+      }
+    }
   }
 
   log.info(

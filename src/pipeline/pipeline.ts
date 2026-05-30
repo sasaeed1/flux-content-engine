@@ -51,6 +51,7 @@ import type {
   SinglePostContent,
   SlideContent,
 } from '../types';
+import { emit, slideRenderedPayload, type PipelineEventSink } from './events';
 
 function nowIso(): string {
   return new Date().toISOString();
@@ -66,11 +67,27 @@ function buildFinalCaption(caption: string, hashtags: string[]): string {
   return full.length > 2200 ? full.slice(0, 2200) : full;
 }
 
-export async function runPipeline(options: PipelineOptions): Promise<PipelineResult> {
+export async function runPipeline(
+  options: PipelineOptions,
+  /**
+   * Optional streaming sink — when provided, the orchestrator emits events
+   * at every major boundary (topic resolved, brand loaded, content generated,
+   * each slide rendered, complete). The Studio's live-stream view passes a
+   * sink that writes SSE chunks to the open HTTP response.
+   */
+  sink?: PipelineEventSink,
+): Promise<PipelineResult> {
   const log = childLogger({ orgId: options.organizationId });
+
+  emit(sink, 'started', {
+    topicId: options.topicId ?? null,
+    styleModeKey: options.styleModeKey ?? null,
+    approvalMode: options.approvalMode ?? 'auto',
+  });
 
   const org = await getOrgById(options.organizationId);
   if (!org) {
+    emit(sink, 'error', { reason: 'org_not_found' });
     return {
       runId: '',
       status: 'failed',
@@ -86,6 +103,7 @@ export async function runPipeline(options: PipelineOptions): Promise<PipelineRes
       approvalMode: options.approvalMode,
     },
   });
+  emit(sink, 'run_created', { runId: run.id }, run.id);
 
   let topic: ContentTopicRow | undefined;
   let carouselId: string | undefined;
@@ -108,6 +126,12 @@ export async function runPipeline(options: PipelineOptions): Promise<PipelineRes
     topic = await step('topic', () => resolveTopic(org.id, options.topicId));
     await updateRun(run.id, { topic_id: topic.id });
     await markTopicProcessing(topic);
+    emit(
+      sink,
+      'topic_resolved',
+      { topic: topic.topic, angle: topic.angle, topicId: topic.id },
+      run.id,
+    );
 
     const postType: PostType = (options.postType ?? topic.post_type) as PostType;
     const isCarousel = postType === 'carousel' || postType === 'educational';
@@ -118,7 +142,9 @@ export async function runPipeline(options: PipelineOptions): Promise<PipelineRes
 
     /* ---------- brand + template ---------- */
     const brand = await loadBrandProfile(org.id, options.brandProfileId ?? null);
+    emit(sink, 'brand_loaded', { brandName: brand.name, presetKey: brand.theme.presetKey }, run.id);
     const template = await loadTemplate(org.id, templateKey);
+    emit(sink, 'template_loaded', { templateKey, slideCount: template.definition.slides.length }, run.id);
 
     /* ---------- content ---------- */
     let carouselContent: CarouselContent | null = null;
@@ -136,6 +162,19 @@ export async function runPipeline(options: PipelineOptions): Promise<PipelineRes
         }),
       );
       slides = carouselContent.slides;
+      emit(
+        sink,
+        'content_generated',
+        {
+          kind: 'carousel',
+          title: carouselContent.title,
+          hook: carouselContent.hook,
+          cta: carouselContent.cta,
+          slideCount: slides.length,
+          slides: slides.map((s) => ({ index: s.index, role: s.role, layout: s.layout, data: s.data })),
+        },
+        run.id,
+      );
     } else {
       singleContent = await step('content', () =>
         generateSinglePostContent({
@@ -154,6 +193,17 @@ export async function runPipeline(options: PipelineOptions): Promise<PipelineRes
           data: singleContent.data,
         },
       ];
+      emit(
+        sink,
+        'content_generated',
+        {
+          kind: 'single',
+          slideCount: 1,
+          caption: singleContent.caption,
+          slides: slides.map((s) => ({ index: s.index, role: s.role, layout: s.layout, data: s.data })),
+        },
+        run.id,
+      );
     }
 
     /* ---------- persist draft (status='ready') ---------- */
@@ -210,6 +260,13 @@ export async function runPipeline(options: PipelineOptions): Promise<PipelineRes
     // case the renderer falls back to the brand theme defaults.
     const styleMode = await loadStyleMode(org.id, options.styleModeKey);
 
+    emit(
+      sink,
+      'render_started',
+      { totalSlides: slides.length, styleModeKey: options.styleModeKey ?? null },
+      run.id,
+    );
+
     const rendered: RenderedSlide[] = await step('render', () =>
       composeSlides({
         orgId: org.id,
@@ -218,7 +275,17 @@ export async function runPipeline(options: PipelineOptions): Promise<PipelineRes
         template,
         slides,
         styleMode,
+        // Live per-slide stream — fires after each PNG is uploaded to storage.
+        onSlideRendered: (r, total) =>
+          emit(sink, 'slide_rendered', slideRenderedPayload(r, total) as unknown as Record<string, unknown>, run.id),
       }),
+    );
+
+    emit(
+      sink,
+      'render_complete',
+      { totalSlides: rendered.length, urls: rendered.map((r) => r.publicUrl) },
+      run.id,
     );
 
     /* ---------- upload (already done by composer) + persist assets ---------- */
@@ -292,6 +359,18 @@ export async function runPipeline(options: PipelineOptions): Promise<PipelineRes
         },
       });
       log.info({ topic: topic.topic }, 'Pipeline produced content — awaiting manual approval');
+      emit(
+        sink,
+        'awaiting_approval',
+        {
+          carouselId,
+          postId,
+          imageUrls: rendered.map((r) => r.publicUrl),
+          igAccountMissing,
+        },
+        run.id,
+      );
+      emit(sink, 'complete', { status: 'pending_approval', carouselId, postId }, run.id);
       return {
         runId: run.id,
         status: 'pending_approval',
@@ -338,6 +417,24 @@ export async function runPipeline(options: PipelineOptions): Promise<PipelineRes
     });
 
     log.info({ topic: topic.topic, slides: mediaUrls.length }, 'Pipeline completed');
+    emit(
+      sink,
+      'enqueued',
+      { publishQueueId: queued.id, scheduledFor: publishAt, mediaCount: mediaUrls.length },
+      run.id,
+    );
+    emit(
+      sink,
+      'complete',
+      {
+        status: 'completed',
+        carouselId,
+        postId,
+        publishQueueId: queued.id,
+        imageUrls: mediaUrls,
+      },
+      run.id,
+    );
     return {
       runId: run.id,
       status: 'completed',
@@ -352,6 +449,7 @@ export async function runPipeline(options: PipelineOptions): Promise<PipelineRes
     const message = toErrorMessage(err);
     const code = errorCode(err);
     log.error({ step: currentStep, error: message }, 'Pipeline failed');
+    emit(sink, 'error', { step: currentStep, message, code }, run.id);
 
     try {
       await updateRun(run.id, {

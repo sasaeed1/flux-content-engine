@@ -26,27 +26,106 @@ import type { PipelineOptions, PostType } from '../types';
 const router = Router();
 router.use(requireTenant);
 
+function buildPipelineOptions(orgId: string, body: Record<string, unknown>): PipelineOptions {
+  return {
+    organizationId: orgId,
+    topicId: typeof body.topicId === 'string' ? body.topicId : undefined,
+    brandProfileId: typeof body.brandProfileId === 'string' ? body.brandProfileId : undefined,
+    templateKey: typeof body.templateKey === 'string' ? body.templateKey : undefined,
+    postType: typeof body.postType === 'string' ? (body.postType as PostType) : undefined,
+    publishAt: typeof body.publishAt === 'string' ? body.publishAt : undefined,
+    approvalMode: body.approvalMode === 'manual' ? 'manual' : 'auto',
+    styleModeKey:
+      typeof body.styleModeKey === 'string' && body.styleModeKey.length > 0
+        ? body.styleModeKey
+        : undefined,
+  };
+}
+
 /** POST /tenant/pipeline/run — synchronous; check `body.status` to branch. */
 router.post(
   '/tenant/pipeline/run',
   asyncHandler(async (req, res) => {
     const orgId = req.tenant!.organizationId;
     const body = (req.body ?? {}) as Record<string, unknown>;
-    const opts: PipelineOptions = {
-      organizationId: orgId,
-      topicId: typeof body.topicId === 'string' ? body.topicId : undefined,
-      brandProfileId: typeof body.brandProfileId === 'string' ? body.brandProfileId : undefined,
-      templateKey: typeof body.templateKey === 'string' ? body.templateKey : undefined,
-      postType: typeof body.postType === 'string' ? (body.postType as PostType) : undefined,
-      publishAt: typeof body.publishAt === 'string' ? body.publishAt : undefined,
-      approvalMode: body.approvalMode === 'manual' ? 'manual' : 'auto',
-      styleModeKey:
-        typeof body.styleModeKey === 'string' && body.styleModeKey.length > 0
-          ? body.styleModeKey
-          : undefined,
-    };
-    const result = await runPipeline(opts);
+    const result = await runPipeline(buildPipelineOptions(orgId, body));
     res.json(result);
+  }),
+);
+
+/**
+ * POST /tenant/pipeline/run-stream — Server-Sent Events.
+ *
+ * Holds the response open and writes one `event:` chunk per pipeline event
+ * (started → topic_resolved → brand_loaded → content_generated → slide_rendered ×N
+ *  → render_complete → enqueued/awaiting_approval → complete | error).
+ *
+ * Frontend consumes via fetch + ReadableStream (so the org API key stays in
+ * the x-org-api-key header — EventSource can't set headers). The Studio uses
+ * this to materialize slides as they land, dropping perceived latency from
+ * ~30s (await everything) to ~2s (first slide).
+ *
+ * Connection-keepalive: a `:ping` comment line every 15s keeps proxies
+ * (nginx, Cloudflare) from idling the socket during long content gen.
+ */
+router.post(
+  '/tenant/pipeline/run-stream',
+  asyncHandler(async (req, res) => {
+    const orgId = req.tenant!.organizationId;
+    const body = (req.body ?? {}) as Record<string, unknown>;
+
+    // SSE headers. X-Accel-Buffering disables nginx response buffering so
+    // chunks flush to the client immediately.
+    res.set({
+      'Content-Type': 'text/event-stream; charset=utf-8',
+      'Cache-Control': 'no-cache, no-transform',
+      Connection: 'keep-alive',
+      'X-Accel-Buffering': 'no',
+    });
+    res.flushHeaders();
+
+    let closed = false;
+    req.on('close', () => {
+      closed = true;
+    });
+
+    const write = (chunk: string) => {
+      if (closed) return;
+      try {
+        res.write(chunk);
+      } catch {
+        closed = true;
+      }
+    };
+
+    // Heartbeat keeps the socket open through long synchronous waits
+    // (e.g. provider hiccups). 15s is short enough for Cloudflare's 60s idle.
+    const heartbeat = setInterval(() => write(`:ping ${Date.now()}\n\n`), 15_000);
+
+    const sink = (event: import('../pipeline/events').PipelineEvent) => {
+      if (closed) return;
+      // SSE format: `event: <type>\ndata: <json>\n\n`. The leading `event:`
+      // line is optional but lets EventSource consumers listen for specific
+      // types — we keep it so a future EventSource-based client can plug in.
+      const data = JSON.stringify(event);
+      write(`event: ${event.type}\ndata: ${data}\n\n`);
+    };
+
+    try {
+      const result = await runPipeline(buildPipelineOptions(orgId, body), sink);
+      // Final summary line so the client can resolve its top-level promise
+      // even if it missed the `complete` event mid-flight.
+      write(`event: result\ndata: ${JSON.stringify(result)}\n\n`);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      write(`event: error\ndata: ${JSON.stringify({ type: 'error', payload: { message } })}\n\n`);
+    } finally {
+      clearInterval(heartbeat);
+      if (!closed) {
+        write('event: done\ndata: {}\n\n');
+        res.end();
+      }
+    }
   }),
 );
 
