@@ -349,6 +349,22 @@ export const api = {
       ),
   },
 
+  // Post-audit #3 — Asset Library
+  listAssets: (kind?: 'overlay' | 'texture' | 'gradient' | 'motion-preset' | 'icon-pack') =>
+    engineFetch<{
+      assets: Array<{
+        id: string;
+        kind: string;
+        name: string;
+        storage_path: string | null;
+        public_url: string | null;
+        metadata: Record<string, unknown>;
+        is_system: boolean;
+        is_premium: boolean;
+        created_at: string;
+      }>;
+    }>(`/api/tenant/assets${kind ? `?kind=${kind}` : ''}`),
+
   // Brand kit
   listBrandAssets: () =>
     engineFetch<{

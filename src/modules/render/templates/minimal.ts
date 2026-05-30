@@ -47,6 +47,8 @@ export interface StyleModeOverlay {
     glow?: number;
     vignette?: number;
     blur?: number;
+    /** Post-audit #3 — named system overlay (e.g. 'islamic-geometric'). */
+    overlay?: string;
   };
 }
 
@@ -99,12 +101,24 @@ function fontFamily(name: string | undefined, fallback: string): string {
   return `"${(name ?? fallback).replace(/"/g, '')}", ${fallback}`;
 }
 
+// Asset library — overlay layer for style modes that reference a texture name.
+// Imported lazily inside baseCss so this file stays cycle-free during tests.
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+import { buildOverlayCss } from '../../assets/systemAssets';
+
 function baseCss(args: RenderSlideArgs): string {
   // The style mode overlay takes precedence over the brand theme. Brand still
   // wins for anything the style doesn't specify (logo/handle/etc.).
   const smTyp = args.styleMode?.typography ?? {};
   const smPal = args.styleMode?.palette ?? {};
   const smEffects = args.styleMode?.effects ?? {};
+
+  // Post-audit #3: resolve named overlay (e.g. 'islamic-geometric') to a
+  // ready-to-inline CSS block. Returns null when the name is unknown.
+  const overlayCss = buildOverlayCss(smEffects.overlay as string | undefined);
+  // Glow effect — radial highlight tinted with the accent color. Driven by
+  // effects.glow in [0..1].
+  const glowIntensity = typeof smEffects.glow === 'number' ? Math.max(0, Math.min(1, smEffects.glow)) : 0;
 
   const c = args.brand.theme.colors;
   const t = args.brand.theme.typography;
@@ -174,6 +188,34 @@ function baseCss(args: RenderSlideArgs): string {
       background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%25' height='100%25' filter='url(%23n)' opacity='${(smEffects.grain ?? 0).toFixed(2)}'/></svg>");
       mix-blend-mode: overlay;
       pointer-events: none;
+      z-index: 1;
+    }` : ''}
+    ${overlayCss ? `
+    /* Post-audit #3 — named overlay (e.g. islamic-geometric, crt-scanlines) */
+    .overlay-layer {
+      position: absolute; inset: 0;
+      background-image: ${overlayCss.backgroundImage};
+      background-size: ${overlayCss.backgroundSize};
+      background-repeat: repeat;
+      opacity: ${overlayCss.opacity.toFixed(2)};
+      mix-blend-mode: ${overlayCss.mixBlendMode};
+      color: var(--accent);
+      pointer-events: none;
+      z-index: 2;
+    }` : ''}
+    ${glowIntensity > 0 ? `
+    /* Post-audit #3 — accent-tinted radial glow */
+    .glow-layer {
+      position: absolute; inset: 0;
+      background:
+        radial-gradient(ellipse at 50% 35%,
+          color-mix(in srgb, var(--accent) ${(glowIntensity * 65).toFixed(0)}%, transparent),
+          transparent 65%);
+      filter: blur(${(glowIntensity * 8).toFixed(1)}px);
+      mix-blend-mode: screen;
+      opacity: ${(0.45 + glowIntensity * 0.35).toFixed(2)};
+      pointer-events: none;
+      z-index: 0;
     }` : ''}
     .slide {
       position: relative;
@@ -472,6 +514,15 @@ export function renderSlide(args: RenderSlideArgs): string {
     ? `<div class="pageIndicator">${(args.slideIndex ?? 0) + 1} / ${args.totalSlides}</div>`
     : '';
 
+  // Recompute the layer activation at this scope so the body HTML can decide
+  // whether to mount the glow/overlay divs without reaching into baseCss.
+  const smEffectsOuter = args.styleMode?.effects ?? {};
+  const overlayOuter = buildOverlayCss(smEffectsOuter.overlay as string | undefined);
+  const glowOuter =
+    typeof smEffectsOuter.glow === 'number'
+      ? Math.max(0, Math.min(1, smEffectsOuter.glow))
+      : 0;
+
   return `<!doctype html>
 <html><head>
 <meta charset="utf-8">
@@ -479,6 +530,8 @@ ${fontLinkFor(args)}
 <style>${baseCss(args)}</style>
 </head>
 <body>
+  ${glowOuter > 0 ? '<div class="glow-layer" aria-hidden="true"></div>' : ''}
+  ${overlayOuter ? '<div class="overlay-layer" aria-hidden="true"></div>' : ''}
   <div class="slide${args.layout === 'two-column-list' ? ' left' : ''}">
     ${indicator}
     ${body}

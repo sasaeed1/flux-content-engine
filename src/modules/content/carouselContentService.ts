@@ -12,6 +12,7 @@ import {
 } from './historyService';
 import { childLogger } from '../../lib/logger';
 import { loadPerformanceWeights } from '../intelligence/performanceRollup';
+import { renderPerformanceMemoryBlock } from '../intelligence/memoryPromptBlock';
 import type { BrandProfile, CarouselContent, OrganizationRow, SlideContent, Template } from '../../types';
 
 const log = childLogger({ module: 'carousel-content' });
@@ -53,6 +54,20 @@ export async function generateCarouselContent(input: {
       history.recentLayoutArchetypes,
     );
     diversityBlock = renderAntiRepetitionBlock(history, hookArchetype);
+
+    // Post-audit #2 — also feed the weighted memory INTO the LLM prompt,
+    // not just into the picker. The model learns "Q1: deep-dives are
+    // working; comparisons aren't" instead of generic taste.
+    if (weights && weights.sampleSize > 0) {
+      const memoryBlock = await renderPerformanceMemoryBlock(input.organization.id, {
+        preloaded: weights,
+        topPerDim: 3,
+      }).catch(() => '');
+      if (memoryBlock) {
+        diversityBlock = `${diversityBlock}\n\n${memoryBlock}`;
+      }
+    }
+
     if (weights && weights.byHook.size > 0) {
       log.info(
         {
@@ -62,7 +77,7 @@ export async function generateCarouselContent(input: {
           weightedCandidates: weights.byHook.size,
           sampleSize: weights.sampleSize,
         },
-        'Hook archetype picked with engagement weighting',
+        'Hook archetype picked with engagement weighting + memory in prompt',
       );
     }
   } catch (err) {

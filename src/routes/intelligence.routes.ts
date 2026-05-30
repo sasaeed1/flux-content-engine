@@ -22,6 +22,7 @@ import { completeJsonRouted, providerStatus } from '../ai/router';
 import { dailySummary as quotaSummary } from '../ai/quotaTracker';
 import { supabase } from '../lib/supabase';
 import { HOOK_ARCHETYPES, getRecentHistory } from '../modules/content/historyService';
+import { renderPerformanceMemoryBlock } from '../modules/intelligence/memoryPromptBlock';
 import { childLogger } from '../lib/logger';
 
 const router = Router();
@@ -73,8 +74,13 @@ router.post(
 
     const org = await getOrgById(orgId);
     if (!org) throw new AppError('Org missing', { status: 500, code: 'ORG_MISSING' });
-    const brand = await loadBrandProfile(orgId, null);
-    const history = await getRecentHistory(orgId, 10);
+    // Phase 3D follow-up — pull brand voice + recent history + performance
+    // memory in parallel so the prompt has every available signal.
+    const [brand, history, memoryBlock] = await Promise.all([
+      loadBrandProfile(orgId, null),
+      getRecentHistory(orgId, 10),
+      renderPerformanceMemoryBlock(orgId, { topPerDim: 3 }),
+    ]);
 
     const archetypeLine = body.archetype
       ? `Generate ${count} hooks using the ${body.archetype} archetype.`
@@ -92,6 +98,7 @@ router.post(
       history.recentHooks.length
         ? `AVOID repeating these recent hooks: ${history.recentHooks.slice(0, 6).map((h) => `"${h}"`).join(' | ')}`
         : '',
+      memoryBlock,
       '',
       `ARCHETYPES (use as the "archetype" field): ${HOOK_ARCHETYPES.join(', ')}`,
     ]
@@ -144,7 +151,10 @@ router.post(
   asyncHandler(async (req, res) => {
     const orgId = req.tenant!.organizationId;
     const body = topicScoreRequestSchema.parse(req.body ?? {});
-    const brand = await loadBrandProfile(orgId, null);
+    const [brand, memoryBlock] = await Promise.all([
+      loadBrandProfile(orgId, null),
+      renderPerformanceMemoryBlock(orgId, { topPerDim: 3 }),
+    ]);
 
     const system = [
       'You are a content strategist scoring carousel topics for an SMB Instagram account.',
@@ -155,8 +165,11 @@ router.post(
       ' - virality_score: how likely it is to break out beyond the existing audience.',
       ' - audience_fit: how aligned it is with this specific brand\'s niche + voice.',
       'Be honest — most topics should land 0.3–0.7. Reserve 0.85+ for genuinely strong picks.',
+      memoryBlock,
       'Suggest one hook archetype that would suit the topic from this set: ' + HOOK_ARCHETYPES.join(', '),
-    ].join('\n');
+    ]
+      .filter(Boolean)
+      .join('\n');
 
     const user = [
       'TOPICS TO SCORE:',
@@ -373,6 +386,32 @@ router.post(
     const { generateInsightsForOrg } = await import('../modules/intelligence/insightsGenerator');
     const inserted = await generateInsightsForOrg(orgId);
     res.json({ ok: true, inserted });
+  }),
+);
+
+/* ============================================================
+ *  /assets — Post-audit #3 — asset library listing.
+ *  Returns system overlays/textures (organization_id NULL) plus any
+ *  per-org custom assets. The Studio's eventual "Asset Browser" UI
+ *  consumes this; the renderer references assets by name from style modes.
+ * ============================================================ */
+
+router.get(
+  '/tenant/assets',
+  asyncHandler(async (req, res) => {
+    const orgId = req.tenant!.organizationId;
+    const kind = typeof req.query.kind === 'string' ? req.query.kind : undefined;
+    const q = supabase
+      .from('asset_library')
+      .select('id, kind, name, storage_path, public_url, metadata, is_system, is_premium, created_at')
+      .or(`organization_id.eq.${orgId},organization_id.is.null`)
+      .order('is_system', { ascending: false })
+      .order('kind')
+      .order('name');
+    if (kind) q.eq('kind', kind);
+    const { data, error } = await q;
+    if (error) throw new AppError(error.message, { status: 500, code: 'ASSETS_FETCH' });
+    res.json({ assets: data ?? [] });
   }),
 );
 

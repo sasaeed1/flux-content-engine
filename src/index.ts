@@ -7,6 +7,7 @@ import { startScheduler, stopScheduler } from './scheduler/scheduler';
 import { ensureBuckets } from './lib/storage';
 import { shutdownRenderer } from './modules/render/htmlRenderer';
 import { seedSystemStyleModes } from './modules/styles/seedOnBoot';
+import { seedSystemAssets } from './modules/assets/seedOnBoot';
 import { logger } from './lib/logger';
 import { toErrorMessage } from './lib/errors';
 
@@ -28,6 +29,15 @@ async function main(): Promise<void> {
     await seedSystemStyleModes();
   } catch (err) {
     logger.warn({ error: toErrorMessage(err) }, 'style-mode auto-seed failed — continuing');
+  }
+
+  // Asset library — register code-backed system overlays/textures so the
+  // renderer's overlay loader has rows to join against and the asset browser
+  // UI can list them. Idempotent.
+  try {
+    await seedSystemAssets();
+  } catch (err) {
+    logger.warn({ error: toErrorMessage(err) }, 'asset auto-seed failed — continuing');
   }
 
   const app = createServer();
