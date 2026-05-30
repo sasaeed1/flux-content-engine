@@ -377,6 +377,61 @@ router.post(
 );
 
 /* ============================================================
+ *  /performance/rollup — Phase 3D manual rollup trigger.
+ *  Reads the org's recent analytics and folds them into
+ *  content_performance, which drives the bias on future generation.
+ *  The scheduler also runs this after every analytics tick.
+ * ============================================================ */
+
+router.post(
+  '/tenant/intelligence/performance/rollup',
+  asyncHandler(async (req, res) => {
+    const orgId = req.tenant!.organizationId;
+    const since = Number(req.body?.sinceHours) || 30 * 24;
+    const { rollupOrganizationPerformance } = await import(
+      '../modules/intelligence/performanceRollup'
+    );
+    const result = await rollupOrganizationPerformance(orgId, since);
+    res.json({ ok: true, ...result });
+  }),
+);
+
+/* ============================================================
+ *  /performance/top — Phase 3D read API. Returns the same shape as
+ *  /memory/recall but loaded through the rollup helper so the floor /
+ *  min-samples logic stays consistent. Also exposes which hook would be
+ *  picked NEXT given current weights — useful for showing the user
+ *  "your next post will lean into <archetype>".
+ * ============================================================ */
+
+router.get(
+  '/tenant/intelligence/performance/top',
+  asyncHandler(async (req, res) => {
+    const orgId = req.tenant!.organizationId;
+    const { loadPerformanceWeights } = await import(
+      '../modules/intelligence/performanceRollup'
+    );
+    const w = await loadPerformanceWeights(orgId);
+
+    const serialise = (m: Map<string, { sample: number; avgEngagement: number }>) =>
+      [...m.entries()]
+        .map(([key, v]) => ({
+          key,
+          sample_size: v.sample,
+          avg_engagement: Number(v.avgEngagement.toFixed(4)),
+        }))
+        .sort((a, b) => b.avg_engagement - a.avg_engagement);
+
+    res.json({
+      sample_size: w.sampleSize,
+      top_hooks: serialise(w.byHook).slice(0, 8),
+      top_styles: serialise(w.byStyle).slice(0, 8),
+      top_ctas: serialise(w.byCta).slice(0, 8),
+    });
+  }),
+);
+
+/* ============================================================
  *  /workspace-mode — get/set the active workspace mode
  *  (creator / campaign / motion / strategy / analytics).
  * ============================================================ */

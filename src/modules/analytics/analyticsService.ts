@@ -5,6 +5,7 @@ import { getRecentPublishedPosts, insertAnalytics } from '../../db/repositories'
 import { toErrorMessage } from '../../lib/errors';
 import { childLogger } from '../../lib/logger';
 import type { PublishedPostRow } from '../../types';
+import { rollupAllPerformance } from '../intelligence/performanceRollup';
 
 const log = childLogger({ module: 'analytics' });
 
@@ -48,6 +49,8 @@ async function refreshPost(post: PublishedPostRow): Promise<boolean> {
 export async function collectRecentAnalytics(sinceHours = 96): Promise<{
   checked: number;
   updated: number;
+  rollupWritten: number;
+  rollupOrgs: number;
 }> {
   const posts = await getRecentPublishedPosts(sinceHours);
   let updated = 0;
@@ -59,6 +62,23 @@ export async function collectRecentAnalytics(sinceHours = 96): Promise<{
       log.warn({ postId: post.id, error: toErrorMessage(err) }, 'Failed to refresh analytics');
     }
   }
-  log.info({ checked: posts.length, updated }, 'Analytics collection complete');
-  return { checked: posts.length, updated };
+
+  // Phase 3D — fold the freshly-synced raw metrics into content_performance,
+  // which is what drives hook/style/cta bias on future generation. Wrapping
+  // in try/catch — a rollup failure should never abort the analytics cycle.
+  let rollupWritten = 0;
+  let rollupOrgs = 0;
+  try {
+    const rollup = await rollupAllPerformance(sinceHours);
+    rollupOrgs = rollup.orgsProcessed;
+    rollupWritten = rollup.totalWritten;
+  } catch (err) {
+    log.warn({ error: toErrorMessage(err) }, 'Performance rollup failed');
+  }
+
+  log.info(
+    { checked: posts.length, updated, rollupWritten, rollupOrgs },
+    'Analytics collection complete',
+  );
+  return { checked: posts.length, updated, rollupWritten, rollupOrgs };
 }

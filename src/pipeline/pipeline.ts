@@ -181,6 +181,10 @@ export async function runPipeline(options: PipelineOptions): Promise<PipelineRes
         metadata: {
           hook_archetype: cc.hookArchetype ?? null,
           layout_archetypes: cc.layoutArchetypes ?? [],
+          // Phase 3D — capture the visual style so performance rollup can
+          // link metrics back to the exact style mode that was rendered.
+          style_mode_key: options.styleModeKey ?? null,
+          cta_style: brand.ctaStyle ?? null,
         } as Record<string, unknown>,
       });
       carouselId = row.id;

@@ -309,6 +309,26 @@ export const api = {
         top_styles: Array<{ key: string; sample_size: number; avg_engagement: number }>;
         top_ctas: Array<{ key: string; sample_size: number; avg_engagement: number }>;
       }>('/api/tenant/intelligence/memory/recall'),
+    // Phase 3D — engagement-weighted performance from content_performance.
+    performanceTop: () =>
+      engineFetch<{
+        sample_size: number;
+        top_hooks: Array<{ key: string; sample_size: number; avg_engagement: number }>;
+        top_styles: Array<{ key: string; sample_size: number; avg_engagement: number }>;
+        top_ctas: Array<{ key: string; sample_size: number; avg_engagement: number }>;
+      }>('/api/tenant/intelligence/performance/top'),
+    performanceRollup: (sinceHours?: number) =>
+      engineFetch<{
+        ok: true;
+        organizationId: string;
+        carouselsConsidered: number;
+        rowsWritten: number;
+        rowsSkipped: number;
+        errors: number;
+      }>('/api/tenant/intelligence/performance/rollup', {
+        method: 'POST',
+        json: sinceHours ? { sinceHours } : {},
+      }),
     command: (input: string) =>
       engineFetch<{
         action: string;

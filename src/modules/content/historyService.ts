@@ -141,13 +141,66 @@ export async function getRecentHistory(
 /**
  * Pick the next hook archetype. Avoids the last 3 used — if the org has only
  * ever used the same archetype, this guarantees a different one next time.
+ *
+ * Phase 3D: when `weights` are provided (loaded from content_performance),
+ * we keep the anti-repetition rule but bias the pick toward higher-engagement
+ * archetypes. A 0.4-engagement archetype is 4× more likely than a 0.1 one.
+ * Unweighted archetypes get a floor so brand-new ones still rotate in.
  */
-export function pickNextHookArchetype(recent: HookArchetype[]): HookArchetype {
+export function pickNextHookArchetype(
+  recent: HookArchetype[],
+  weights?: Map<string, { sample: number; avgEngagement: number }>,
+): HookArchetype {
   const lastThree = new Set(recent.slice(0, 3));
   const candidates = HOOK_ARCHETYPES.filter((a) => !lastThree.has(a));
   const pool = candidates.length > 0 ? candidates : [...HOOK_ARCHETYPES];
-  // Weight slightly toward archetypes never seen — but mostly random.
-  return pool[Math.floor(Math.random() * pool.length)];
+
+  if (!weights || weights.size === 0) {
+    return pool[Math.floor(Math.random() * pool.length)];
+  }
+
+  // Weighted pick. Floor of 0.05 ensures unobserved archetypes still get
+  // explored (epsilon-greedy style — we never collapse to one favourite).
+  const FLOOR = 0.05;
+  const weighted = pool.map((a) => {
+    const w = weights.get(a);
+    const v = w ? Math.max(FLOOR, w.avgEngagement) : FLOOR;
+    return { a, v };
+  });
+  const total = weighted.reduce((s, w) => s + w.v, 0);
+  let r = Math.random() * total;
+  for (const { a, v } of weighted) {
+    r -= v;
+    if (r <= 0) return a;
+  }
+  return weighted[weighted.length - 1].a;
+}
+
+/**
+ * Generic weighted-pick — used to recommend a default style mode when the
+ * user hasn't pinned one. Floor + epsilon keeps unobserved styles in play.
+ */
+export function pickWeightedKey(
+  candidates: string[],
+  weights: Map<string, { sample: number; avgEngagement: number }>,
+  floor = 0.05,
+): string | null {
+  if (candidates.length === 0) return null;
+  if (weights.size === 0) {
+    return candidates[Math.floor(Math.random() * candidates.length)];
+  }
+  const weighted = candidates.map((k) => {
+    const w = weights.get(k);
+    const v = w ? Math.max(floor, w.avgEngagement) : floor;
+    return { k, v };
+  });
+  const total = weighted.reduce((s, w) => s + w.v, 0);
+  let r = Math.random() * total;
+  for (const { k, v } of weighted) {
+    r -= v;
+    if (r <= 0) return k;
+  }
+  return weighted[weighted.length - 1].k;
 }
 
 /**

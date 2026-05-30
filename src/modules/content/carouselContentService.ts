@@ -11,6 +11,7 @@ import {
   type LayoutArchetype,
 } from './historyService';
 import { childLogger } from '../../lib/logger';
+import { loadPerformanceWeights } from '../intelligence/performanceRollup';
 import type { BrandProfile, CarouselContent, OrganizationRow, SlideContent, Template } from '../../types';
 
 const log = childLogger({ module: 'carousel-content' });
@@ -36,13 +37,34 @@ export async function generateCarouselContent(input: {
   let hookArchetype: HookArchetype;
   let layoutArchetypes: LayoutArchetype[];
   try {
-    const history = await getRecentHistory(input.organization.id, 12);
-    hookArchetype = pickNextHookArchetype(history.recentHookArchetypes);
+    // Phase 3D — pull engagement weights so the hook picker biases toward
+    // archetypes that actually performed for THIS brand. Falls back to pure
+    // anti-repetition rotation when there's no signal yet.
+    const [history, weights] = await Promise.all([
+      getRecentHistory(input.organization.id, 12),
+      loadPerformanceWeights(input.organization.id).catch(() => undefined),
+    ]);
+    hookArchetype = pickNextHookArchetype(
+      history.recentHookArchetypes,
+      weights?.byHook,
+    );
     layoutArchetypes = pickLayoutArchetypes(
       input.template.definition.slides.length,
       history.recentLayoutArchetypes,
     );
     diversityBlock = renderAntiRepetitionBlock(history, hookArchetype);
+    if (weights && weights.byHook.size > 0) {
+      log.info(
+        {
+          orgId: input.organization.id,
+          archetypeChosen: hookArchetype,
+          weighted: true,
+          weightedCandidates: weights.byHook.size,
+          sampleSize: weights.sampleSize,
+        },
+        'Hook archetype picked with engagement weighting',
+      );
+    }
   } catch (err) {
     log.warn({ err: (err as Error).message }, 'history fetch failed — generating without diversity guidance');
     hookArchetype = 'curiosity';
