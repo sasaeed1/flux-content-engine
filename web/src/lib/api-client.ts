@@ -355,4 +355,55 @@ export const api = {
     ),
   deleteBrandAsset: (id: string) =>
     engineFetch<{ ok: true }>(`/api/tenant/brand/assets/${id}`, { method: 'DELETE' }),
+
+  // Phase 3C — Brand DNA AI extraction
+  extractBrandDna: (assetId: string) =>
+    engineFetch<{
+      ok: true;
+      assetId: string;
+      evidence: {
+        palette: string[];
+        pdfTextPreview: string | null;
+        sourceFilename: string | null;
+        sourceContentType: string | null;
+      };
+      proposed: {
+        colors: Partial<{
+          background: string;
+          foreground: string;
+          accent: string;
+          accentSoft: string;
+          muted: string;
+        }>;
+        typography: Partial<{ fontPrimary: string; fontDisplay: string }>;
+        tone?: string;
+        postStyle?: string;
+        ctaStyle?: string;
+        voiceKeywords: string[];
+        voiceAvoid: string[];
+        summary?: string;
+        confidence?: number;
+      };
+      extractedAt: string;
+    }>(`/api/tenant/brand/assets/${assetId}/extract`, {
+      method: 'POST',
+      json: {},
+    }),
+  applyBrandDna: (body: {
+    brandId?: string;
+    proposed: Record<string, unknown>;
+    accept?: Array<
+      | 'colors'
+      | 'typography'
+      | 'tone'
+      | 'postStyle'
+      | 'ctaStyle'
+      | 'voiceKeywords'
+      | 'voiceAvoid'
+    >;
+  }) =>
+    engineFetch<{ ok: true; brandId: string; applied: string[] }>(
+      '/api/tenant/brand/dna/apply',
+      { method: 'POST', json: body },
+    ),
 };

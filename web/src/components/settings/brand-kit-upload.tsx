@@ -8,6 +8,7 @@ import {
   FileText,
   Image as ImageIcon,
   Loader2,
+  Sparkles,
   Trash2,
   Upload,
   Wand2,
@@ -16,8 +17,13 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
   deleteBrandAssetAction,
+  extractBrandDnaAction,
   uploadBrandAssetAction,
 } from '@/app/(app)/settings/actions';
+import {
+  BrandDnaReview,
+  type ExtractionPayload,
+} from '@/components/settings/brand-dna-review';
 
 interface BrandAsset {
   id: string;
@@ -67,6 +73,32 @@ export function BrandKitUpload({ assets }: { assets: BrandAsset[] }) {
   const [err, setErr] = useState<string | null>(null);
   const [ok, setOk] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  // Phase 3C — Brand DNA extraction state
+  const [extracting, setExtracting] = useState<string | null>(null);
+  const [review, setReview] = useState<ExtractionPayload | null>(null);
+
+  const extract = async (asset: BrandAsset) => {
+    setErr(null);
+    setOk(null);
+    setExtracting(asset.id);
+    try {
+      const result = await extractBrandDnaAction(asset.id);
+      setReview({
+        assetId: result.assetId,
+        evidence: {
+          palette: result.evidence.palette,
+          pdfTextPreview: result.evidence.pdfTextPreview,
+          sourceFilename: result.evidence.sourceFilename,
+        },
+        proposed: result.proposed,
+        extractedAt: result.extractedAt,
+      });
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : 'Extraction failed.');
+    } finally {
+      setExtracting(null);
+    }
+  };
 
   const handleFile = async (file: File) => {
     setErr(null);
@@ -169,13 +201,16 @@ export function BrandKitUpload({ assets }: { assets: BrandAsset[] }) {
       <div className="flex items-start gap-3 rounded-xl border border-primary/30 bg-primary/[0.06] px-4 py-3 text-sm">
         <Wand2 className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
         <div className="flex-1">
-          <strong className="text-foreground">Auto-extract brand profile</strong>
+          <strong className="text-foreground">Auto-extract brand DNA</strong>
           <span className="block text-xs text-muted-foreground">
-            Coming next batch — Flux will read your uploaded PDFs and auto-populate
-            colors, typography, tone, and CTA style.
+            Click <em>Extract</em> on any asset and Flux reads its colors, typography
+            cues, tone and voice — then proposes an update to your default brand.
+            Review what to accept before it lands.
           </span>
         </div>
-        <Badge variant="outline">Soon</Badge>
+        <Badge variant="outline" className="border-primary/40 text-primary">
+          New
+        </Badge>
       </div>
 
       {/* Existing assets */}
@@ -222,6 +257,23 @@ export function BrandKitUpload({ assets }: { assets: BrandAsset[] }) {
                     </div>
                   </div>
                   <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => extract(a)}
+                    disabled={pending || extracting === a.id}
+                    className="gap-1.5"
+                    title="Extract brand DNA from this asset"
+                  >
+                    {extracting === a.id ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <Sparkles className="h-3.5 w-3.5 text-primary" />
+                    )}
+                    <span className="hidden sm:inline">
+                      {extracting === a.id ? 'Extracting…' : 'Extract'}
+                    </span>
+                  </Button>
+                  <Button
                     variant="ghost"
                     size="sm"
                     onClick={() => remove(a.id)}
@@ -235,6 +287,18 @@ export function BrandKitUpload({ assets }: { assets: BrandAsset[] }) {
             })}
           </ul>
         </div>
+      )}
+
+      {/* Phase 3C — Review modal mounts on top when a proposal is ready */}
+      {review && (
+        <BrandDnaReview
+          payload={review}
+          onClose={() => setReview(null)}
+          onApplied={() => {
+            setReview(null);
+            setOk('Brand DNA applied to your default brand.');
+          }}
+        />
       )}
 
       {ok && (

@@ -40,3 +40,28 @@ export async function deleteBrandAssetAction(id: string) {
   revalidatePath('/brand');
   return res;
 }
+
+// Phase 3C — Brand DNA AI extraction
+export async function extractBrandDnaAction(assetId: string) {
+  return await api.extractBrandDna(assetId);
+}
+
+export async function applyBrandDnaAction(body: {
+  brandId?: string;
+  proposed: Record<string, unknown>;
+  accept?: Array<
+    | 'colors'
+    | 'typography'
+    | 'tone'
+    | 'postStyle'
+    | 'ctaStyle'
+    | 'voiceKeywords'
+    | 'voiceAvoid'
+  >;
+}) {
+  const res = await api.applyBrandDna(body);
+  revalidatePath('/settings');
+  revalidatePath('/brand');
+  revalidatePath('/dashboard');
+  return res;
+}

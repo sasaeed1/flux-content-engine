@@ -25,6 +25,11 @@ import { uploadBuffer, storagePaths } from '../lib/storage';
 import { env } from '../config/env';
 import crypto from 'node:crypto';
 import { loadBrandProfile } from '../modules/brand/brandService';
+import {
+  extractDnaForAsset,
+  dnaToBrandPatch,
+  type ProposedBrandDna,
+} from '../modules/brand/dnaExtractor';
 import { generateAndInsertTopics } from '../modules/topics/topicService';
 import type { ContentTopicRow, BrandProfileRow } from '../types';
 
@@ -392,6 +397,62 @@ router.delete(
       .eq('id', id);
     if (error) throw new ValidationError(error.message);
     res.json({ ok: true });
+  }),
+);
+
+/* ---------- /tenant/brand/assets/:id/extract — Phase 3C Brand DNA ---------- */
+// Runs the dnaExtractor against a single uploaded asset and stores the proposal
+// in the asset's metadata.extraction. The web UI calls this from the Brand
+// page when the user clicks "Extract brand DNA" on an asset.
+//
+// Worth noting: this is intentionally synchronous. Extraction is dominated by
+// a single LLM call (~1-3s) + a sharp histogram pass (~200ms) — fast enough to
+// resolve inside the HTTP request. If we add PDF rasterisation later we'll
+// flip this to a background job.
+router.post(
+  '/tenant/brand/assets/:id/extract',
+  asyncHandler(async (req, res) => {
+    const orgId = req.tenant!.organizationId;
+    const id = req.params.id;
+    const result = await extractDnaForAsset(orgId, id);
+    res.json({ ok: true, ...result });
+  }),
+);
+
+/* ---------- /tenant/brand/dna/apply — accept an extracted proposal ---------- */
+// Takes a previously-extracted (or hand-edited) DNA proposal and applies the
+// accepted slots to the default brand profile. The user picks which slots to
+// accept in the review modal — this endpoint just does the merge.
+router.post(
+  '/tenant/brand/dna/apply',
+  asyncHandler(async (req, res) => {
+    const orgId = req.tenant!.organizationId;
+    const body = (req.body ?? {}) as {
+      brandId?: string;
+      proposed?: ProposedBrandDna;
+      accept?: Array<string>;
+    };
+    if (!body.proposed) {
+      throw new ValidationError('Body must include "proposed" (the DNA object)');
+    }
+    // Resolve target brand — explicit id or default for org.
+    let targetBrandId = body.brandId;
+    if (!targetBrandId) {
+      const def = await getDefaultBrandForOrg(orgId);
+      if (!def) throw new ValidationError('No default brand for this org — create one first');
+      targetBrandId = def.id;
+    }
+    const patch = dnaToBrandPatch(
+      body.proposed,
+      { accept: body.accept as never },
+    );
+    if (Object.keys(patch).length === 0) {
+      throw new ValidationError(
+        'Nothing to apply — proposal was empty for the accepted slots',
+      );
+    }
+    await updateBrand(orgId, targetBrandId, patch as Partial<BrandProfileRow>);
+    res.json({ ok: true, brandId: targetBrandId, applied: Object.keys(patch) });
   }),
 );
 
