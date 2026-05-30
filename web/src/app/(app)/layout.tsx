@@ -2,27 +2,23 @@ import { Sidebar } from '@/components/nav/sidebar';
 import { Topbar } from '@/components/nav/topbar';
 import { CommandPalette } from '@/components/flux/command-palette';
 import { WorkspaceModeSwitcher } from '@/components/flux/workspace-mode-switcher';
-import { setWorkspaceModeAction } from '@/app/(app)/workspace-mode-actions';
-import { api } from '@/lib/api-client';
+import {
+  getWorkspaceModeAction,
+  setWorkspaceModeAction,
+} from '@/app/(app)/workspace-mode-actions';
 
-export default async function AppLayout({ children }: { children: React.ReactNode }) {
-  // Load the active mode server-side so the sidebar renders without a flash.
-  // If anything fails (no plan-info, engine down) we fall back to 'creator'.
-  let initialMode = 'creator';
-  try {
-    const res = await api.intelligence.getMode();
-    if (res?.mode) initialMode = res.mode;
-  } catch {
-    /* engine unreachable — keep default */
-  }
-
+// IMPORTANT: do NOT call the engine from this layout server-side. It runs on
+// every authed page; a slow/timeout call here cascades into every navigation.
+// The mode switcher hydrates from a client fetch on mount instead.
+export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex min-h-dvh">
       <Sidebar
         topSlot={
           <WorkspaceModeSwitcher
-            initialMode={initialMode}
+            initialMode="creator"
             setMode={setWorkspaceModeAction}
+            getMode={getWorkspaceModeAction}
           />
         }
       />

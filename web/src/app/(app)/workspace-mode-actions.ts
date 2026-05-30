@@ -10,3 +10,12 @@ export async function setWorkspaceModeAction(mode: string) {
   revalidatePath('/studio');
   return res;
 }
+
+export async function getWorkspaceModeAction(): Promise<string> {
+  try {
+    const res = await api.intelligence.getMode();
+    return res?.mode || 'creator';
+  } catch {
+    return 'creator';
+  }
+}

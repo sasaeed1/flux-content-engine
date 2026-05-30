@@ -63,13 +63,33 @@ export const WORKSPACE_MODES = [
 interface Props {
   initialMode: string;
   setMode: (mode: string) => Promise<{ ok: true; mode: string }>;
+  /** Optional client-side getter — called after mount to hydrate the real
+   *  persisted mode without blocking the initial render. */
+  getMode?: () => Promise<string>;
 }
 
-export function WorkspaceModeSwitcher({ initialMode, setMode }: Props) {
+export function WorkspaceModeSwitcher({ initialMode, setMode, getMode }: Props) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(initialMode || 'creator');
   const [pending, start] = useTransition();
+
+  // Hydrate the real mode after mount. Non-blocking — if the engine is
+  // slow, the user sees the default and gets the right value when it lands.
+  useEffect(() => {
+    if (!getMode) return;
+    let alive = true;
+    void getMode()
+      .then((m) => {
+        if (alive && m) setActive(m);
+      })
+      .catch(() => {
+        /* keep default */
+      });
+    return () => {
+      alive = false;
+    };
+  }, [getMode]);
 
   // Close on outside click + escape
   useEffect(() => {

@@ -59,12 +59,23 @@ async function engineFetch<T>(path: string, opts: FetchOpts = {}): Promise<T> {
   headers.set('x-org-api-key', apiKey);
   if (opts.json !== undefined) headers.set('content-type', 'application/json');
 
-  const res = await fetch(`${ENGINE_URL}${path}`, {
-    ...opts,
-    headers,
-    body: opts.json !== undefined ? JSON.stringify(opts.json) : (opts as RequestInit).body,
-    cache: opts.cache ?? 'no-store',
-  });
+  // Hard timeout — avoid wedging a page render if the engine or Supabase
+  // hangs. Callers can override via opts.signal.
+  const ac = new AbortController();
+  const timer = setTimeout(() => ac.abort(), 12_000);
+
+  let res: Response;
+  try {
+    res = await fetch(`${ENGINE_URL}${path}`, {
+      ...opts,
+      headers,
+      body: opts.json !== undefined ? JSON.stringify(opts.json) : (opts as RequestInit).body,
+      cache: opts.cache ?? 'no-store',
+      signal: opts.signal ?? ac.signal,
+    });
+  } finally {
+    clearTimeout(timer);
+  }
 
   if (!res.ok) {
     const text = await res.text().catch(() => '');

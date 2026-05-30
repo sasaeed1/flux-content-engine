@@ -45,6 +45,12 @@ export async function callOpenAICompatible(
 ): Promise<LLMCallResult> {
   const client = clientFor(opts, apiKey);
   const started = Date.now();
+  // Groq requires the word "json" to appear in the prompt when using
+  // response_format: json_object. OpenAI tolerates it but doesn't require it.
+  // Cheap, universally-safe fix: append a one-liner reminder when jsonMode.
+  const system = args.jsonMode
+    ? `${args.system}\n\nRespond as a SINGLE valid JSON object. No prose, no markdown.`
+    : args.system;
   const text = await withRetry(
     async () => {
       try {
@@ -54,7 +60,7 @@ export async function callOpenAICompatible(
           max_tokens: args.maxTokens,
           response_format: args.jsonMode ? { type: 'json_object' } : undefined,
           messages: [
-            { role: 'system', content: args.system },
+            { role: 'system', content: system },
             { role: 'user', content: args.user },
           ],
         });

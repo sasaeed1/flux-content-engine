@@ -144,7 +144,9 @@ export const carouselContentSchema = z.object({
   hook: z.string(),
   cta: z.string(),
   caption: z.string(),
-  hashtags: z.array(z.string()).min(8),
+  // Was .min(8) — too strict. Some providers occasionally return fewer when
+  // the topic is narrow. Composer's hashtag normaliser tops up if needed.
+  hashtags: z.array(z.string()).min(3),
   slides: z
     .array(
       z.object({
@@ -246,7 +248,9 @@ export const singlePostContentSchema = z.object({
   body: z.string(),
   cta: z.string(),
   caption: z.string(),
-  hashtags: z.array(z.string()).min(8),
+  // Was .min(8) — too strict. Some providers occasionally return fewer when
+  // the topic is narrow. Composer's hashtag normaliser tops up if needed.
+  hashtags: z.array(z.string()).min(3),
   data: z.record(z.string(), slideDataValueSchema),
 });
 
@@ -295,7 +299,9 @@ export function buildSinglePostContentPrompt(input: {
 
 export const captionSchema = z.object({
   caption: z.string(),
-  hashtags: z.array(z.string()).min(8),
+  // Was .min(8) — too strict. Some providers occasionally return fewer when
+  // the topic is narrow. Composer's hashtag normaliser tops up if needed.
+  hashtags: z.array(z.string()).min(3),
 });
 
 export function buildCaptionPrompt(input: {
@@ -329,7 +335,9 @@ export function buildCaptionPrompt(input: {
  * ============================================================ */
 
 export const hashtagsSchema = z.object({
-  hashtags: z.array(z.string()).min(8),
+  // Was .min(8) — too strict. Some providers occasionally return fewer when
+  // the topic is narrow. Composer's hashtag normaliser tops up if needed.
+  hashtags: z.array(z.string()).min(3),
 });
 
 export function buildHashtagsPrompt(input: {
