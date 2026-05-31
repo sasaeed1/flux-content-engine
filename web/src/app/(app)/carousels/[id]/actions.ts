@@ -5,7 +5,7 @@ import { api } from '@/lib/api-client';
 
 export async function approveCarouselAction(id: string, publishAt?: string) {
   await api.approveCarousel(id, publishAt);
-  revalidatePath(`/carousels/${id}`);
+  revalidatePath(`/library/${id}`);
   revalidatePath('/library');
-  revalidatePath('/dashboard');
+  revalidatePath('/home');
 }
