@@ -1,153 +1,100 @@
 'use client';
 
+/**
+ * MobileNav — bottom tab bar mirroring the rail's primary destinations so the
+ * Forge is NEVER missing on mobile (the audit flagged Studio was unreachable).
+ * Forge sits center as a raised gradient CTA. Glass-frosted, safe-area aware.
+ *
+ * Also exports MobileNavButton (a Cmd-K trigger for the topbar on small
+ * screens) so the old Topbar import keeps resolving during the transition.
+ */
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useEffect, useState } from 'react';
-import {
-  HelpCircle,
-  Images,
-  LayoutDashboard,
-  LifeBuoy,
-  LogOut,
-  Menu,
-  Palette,
-  Settings,
-  Sparkles,
-  X,
-} from 'lucide-react';
-import { Logo } from '@/components/flux/logo';
+import { Activity, Fingerprint, LayoutGrid, Search, Sparkles, Wand2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-const nav = [
-  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/library', label: 'Library', icon: Images },
-  { href: '/brand', label: 'Brand', icon: Sparkles },
-  { href: '/themes', label: 'Themes', icon: Palette },
+const TABS = [
+  { href: '/home', label: 'Home', icon: Sparkles },
+  { href: '/library', label: 'Library', icon: LayoutGrid },
+  { href: '/forge', label: 'Forge', icon: Wand2, cta: true },
+  { href: '/signals', label: 'Signals', icon: Activity },
+  { href: '/brand', label: 'Brand', icon: Fingerprint },
 ];
 
-const secondary = [
-  { href: '/settings', label: 'Settings', icon: Settings },
-  { href: '/help', label: 'Help', icon: LifeBuoy },
-];
-
-export function MobileNavButton() {
-  const [open, setOpen] = useState(false);
-  const pathname = usePathname();
-
-  // Close the drawer whenever the route changes (after a nav tap).
-  useEffect(() => {
-    setOpen(false);
-  }, [pathname]);
-
-  // Lock body scroll when the drawer is open so the page behind doesn't move.
-  useEffect(() => {
-    if (typeof document === 'undefined') return;
-    if (open) {
-      const prev = document.body.style.overflow;
-      document.body.style.overflow = 'hidden';
-      return () => {
-        document.body.style.overflow = prev;
-      };
-    }
-  }, [open]);
-
+function active(pathname: string, href: string): boolean {
   return (
-    <>
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        aria-label="Open navigation"
-        className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-border/60 bg-card/40 text-muted-foreground transition hover:text-foreground lg:hidden"
-      >
-        <Menu className="h-4 w-4" />
-      </button>
+    pathname === href ||
+    pathname.startsWith(`${href}/`) ||
+    (href === '/home' && pathname === '/dashboard') ||
+    (href === '/forge' && pathname === '/studio') ||
+    (href === '/library' && pathname.startsWith('/carousels')) ||
+    (href === '/brand' && pathname === '/themes')
+  );
+}
 
-      {/* Backdrop */}
-      <div
-        className={cn(
-          'fixed inset-0 z-40 bg-black/60 backdrop-blur-sm transition-opacity lg:hidden',
-          open ? 'opacity-100' : 'pointer-events-none opacity-0',
-        )}
-        onClick={() => setOpen(false)}
-        aria-hidden
-      />
-
-      {/* Drawer */}
-      <aside
-        className={cn(
-          'fixed inset-y-0 left-0 z-50 flex w-72 flex-col border-r border-border/60 bg-card/95 backdrop-blur-xl transition-transform duration-300 lg:hidden',
-          open ? 'translate-x-0' : '-translate-x-full',
-        )}
-        role="dialog"
-        aria-label="Navigation"
-      >
-        <div className="flex h-16 items-center justify-between px-5">
-          <Link href="/dashboard">
-            <Logo />
+export function MobileNav() {
+  const pathname = usePathname();
+  return (
+    <nav
+      className="glass-frosted fixed inset-x-0 bottom-0 z-40 flex items-stretch justify-around border-t border-edge-subtle px-2 pb-[env(safe-area-inset-bottom)] lg:hidden"
+      aria-label="Primary"
+    >
+      {TABS.map((tab) => {
+        const isActive = active(pathname, tab.href);
+        const Icon = tab.icon;
+        if (tab.cta) {
+          return (
+            <Link
+              key={tab.href}
+              href={tab.href}
+              aria-label="Forge"
+              className="press relative -mt-5 flex flex-col items-center justify-center"
+            >
+              <span
+                className={cn(
+                  'flex h-14 w-14 items-center justify-center rounded-2xl text-flux-ink shadow-[0_10px_30px_-8px_rgba(34,211,238,0.6)]',
+                  'bg-flux-gradient bg-[length:200%_200%]',
+                  isActive && 'ring-2 ring-flux-cyan/50',
+                )}
+              >
+                <Icon className="h-6 w-6" />
+              </span>
+              <span className="mt-1 text-[10px] font-semibold text-flux-violet-bright">Forge</span>
+            </Link>
+          );
+        }
+        return (
+          <Link
+            key={tab.href}
+            href={tab.href}
+            className={cn(
+              'press flex flex-1 flex-col items-center justify-center gap-1 py-2.5 text-[10px] font-medium transition-colors',
+              isActive ? 'text-flux-cyan' : 'text-fg-dim hover:text-fg-muted',
+            )}
+          >
+            <Icon className="h-[18px] w-[18px]" />
+            {tab.label}
           </Link>
-          <button
-            type="button"
-            onClick={() => setOpen(false)}
-            aria-label="Close navigation"
-            className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground hover:text-foreground"
-          >
-            <X className="h-4 w-4" />
-          </button>
-        </div>
+        );
+      })}
+    </nav>
+  );
+}
 
-        <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-2">
-          {nav.map((item) => {
-            const active =
-              pathname === item.href || pathname.startsWith(`${item.href}/`);
-            const Icon = item.icon;
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={cn(
-                  'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors',
-                  active
-                    ? 'bg-flux-soft text-foreground'
-                    : 'text-muted-foreground hover:bg-muted/40 hover:text-foreground',
-                )}
-              >
-                <Icon className="h-4 w-4" />
-                {item.label}
-              </Link>
-            );
-          })}
-          <div className="my-3 mx-3 h-px bg-border/60" />
-          {secondary.map((item) => {
-            const active = pathname === item.href;
-            const Icon = item.icon;
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={cn(
-                  'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors',
-                  active
-                    ? 'bg-flux-soft text-foreground'
-                    : 'text-muted-foreground hover:bg-muted/40 hover:text-foreground',
-                )}
-              >
-                <Icon className="h-4 w-4" />
-                {item.label}
-              </Link>
-            );
-          })}
-        </nav>
-
-        <div className="border-t border-border/60 p-3">
-          <a
-            href="/auth/logout"
-            className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-muted-foreground hover:bg-muted/40 hover:text-foreground"
-          >
-            <LogOut className="h-4 w-4" />
-            Sign out
-          </a>
-        </div>
-      </aside>
-    </>
+/** Compact Cmd-K trigger used by the Topbar on small screens. */
+export function MobileNavButton() {
+  return (
+    <button
+      type="button"
+      onClick={() =>
+        window.dispatchEvent(
+          new KeyboardEvent('keydown', { key: 'k', metaKey: true, ctrlKey: true }),
+        )
+      }
+      aria-label="Open command palette"
+      className="press inline-flex h-9 w-9 items-center justify-center rounded-sm border border-edge-strong bg-surface-1 text-fg-muted transition hover:text-fg lg:hidden"
+    >
+      <Search className="h-4 w-4" />
+    </button>
   );
 }
