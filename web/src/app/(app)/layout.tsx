@@ -1,6 +1,9 @@
-import { Sidebar } from '@/components/nav/sidebar';
+import { CommandRail } from '@/components/nav/command-rail';
+import { MobileNav } from '@/components/nav/mobile-nav';
 import { Topbar } from '@/components/nav/topbar';
 import { CommandPalette } from '@/components/flux/command-palette';
+import { CopilotPanel } from '@/components/flux/copilot-panel';
+import { PageTransition } from '@/components/flux/page-transition';
 import { WorkspaceModeSwitcher } from '@/components/flux/workspace-mode-switcher';
 import {
   getWorkspaceModeAction,
@@ -13,8 +16,9 @@ import {
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex min-h-dvh">
-      <Sidebar
-        topSlot={
+      {/* Command Rail (desktop) — intent-grouped nav + mode switcher + pulse */}
+      <CommandRail
+        modeSlot={
           <WorkspaceModeSwitcher
             initialMode="creator"
             setMode={setWorkspaceModeAction}
@@ -22,15 +26,25 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           />
         }
       />
+
       <div className="flex min-w-0 flex-1 flex-col">
         {/* Topbar is an async server component (fetches org name) */}
         <Topbar />
-        <main className="flex-1 px-3 py-5 sm:px-8 sm:py-10">
-          <div className="mx-auto w-full max-w-7xl animate-fade-up">{children}</div>
+        <main className="flex-1 px-3 pb-24 pt-5 sm:px-8 sm:py-10 lg:pb-10">
+          <div className="mx-auto w-full max-w-7xl">
+            <PageTransition>{children}</PageTransition>
+          </div>
         </main>
-        {/* Cmd/Ctrl+K opens this — always mounted at the app shell */}
-        <CommandPalette />
       </div>
+
+      {/* Mobile bottom tab bar — Forge always reachable */}
+      <MobileNav />
+
+      {/* Cmd/Ctrl+K opens this — always mounted at the app shell */}
+      <CommandPalette />
+
+      {/* Contextual Copilot — summon via Topbar Bot button or Cmd/Ctrl+J */}
+      <CopilotPanel />
     </div>
   );
 }

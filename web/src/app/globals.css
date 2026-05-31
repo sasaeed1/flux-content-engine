@@ -2,29 +2,78 @@
 @tailwind components;
 @tailwind utilities;
 
-/* ------------------------------------------------------------------
- *  Flux design tokens — dark mode is the only mode.
- * ------------------------------------------------------------------ */
+/* ==================================================================
+ *  FLUX DESIGN SYSTEM v2 — "the intelligent creative machine"
+ *  Dark, cinematic, proprietary deep-violet / electric-cyan signature.
+ *  Depth via brightness layering (4 surface levels), real film grain,
+ *  layered glass with true elevation, motion = intelligence.
+ * ================================================================== */
+
+/* Animatable angle for conic halos / thinking rings */
+@property --angle {
+  syntax: '<angle>';
+  initial-value: 0deg;
+  inherits: false;
+}
+
 @layer base {
   :root {
-    --background: 230 26% 4%;          /* near-black, slight cool tint  #08090C */
-    --foreground: 220 14% 96%;
-    --card: 230 24% 7%;
-    --card-foreground: 220 14% 96%;
-    --muted: 230 14% 12%;
-    --muted-foreground: 220 6% 64%;
-    --primary: 188 95% 53%;            /* Flux cyan #22D3EE */
-    --primary-foreground: 230 26% 4%;
-    --accent: 263 82% 76%;              /* Flux violet #A78BFA */
-    --accent-foreground: 230 26% 4%;
-    --secondary: 230 16% 10%;
-    --secondary-foreground: 220 14% 96%;
-    --destructive: 0 75% 60%;
-    --destructive-foreground: 220 14% 96%;
-    --border: 230 16% 14%;
-    --input: 230 18% 11%;
-    --ring: 188 95% 53%;
+    /* ---- shadcn-compatible HSL roles (retuned to v2 palette) ---- */
+    --background: 228 29% 3%;          /* ink #06070B */
+    --foreground: 222 44% 96%;         /* fg  #F2F4FA */
+    --card: 225 28% 9%;                /* surface-1 #10131D */
+    --card-foreground: 222 44% 96%;
+    --muted: 224 29% 12%;              /* surface-2 #161A28 */
+    --muted-foreground: 223 16% 66%;   /* fg-muted #9BA3B7 */
+    --primary: 188 85% 53%;            /* cyan #22D3EE — interactive/focus */
+    --primary-foreground: 228 29% 3%;
+    --accent: 258 90% 66%;             /* violet #8B5CF6 — AI/intelligence */
+    --accent-foreground: 222 44% 96%;
+    --secondary: 224 29% 12%;
+    --secondary-foreground: 222 44% 96%;
+    --destructive: 0 91% 71%;          /* danger #F87171 */
+    --destructive-foreground: 228 29% 3%;
+    --border: 225 26% 15%;             /* border-subtle #1C2030 */
+    --input: 224 29% 12%;
+    --ring: 188 85% 53%;
     --radius: 0.85rem;
+
+    /* ---- v2 semantic tokens (raw, read like prose) ---- */
+    --ink: #06070B;
+    --ink-2: #0A0C12;
+    --surface-0: #0C0E16;   /* page */
+    --surface-1: #10131D;   /* resting card */
+    --surface-2: #161A28;   /* raised / hover */
+    --surface-3: #1E2336;   /* popover / menu */
+    --border-subtle: #1C2030;
+    --border-strong: #2A3047;
+    --border-glow: #3D2E7A;
+
+    --fg: #F2F4FA;
+    --fg-muted: #9BA3B7;
+    --fg-dim: #646B80;
+
+    --violet: #8B5CF6;
+    --violet-deep: #6D28D9;
+    --violet-bright: #A78BFA;
+    --cyan: #22D3EE;
+    --cyan-deep: #0E9FBF;
+    --cyan-bright: #67E8F9;
+    --magenta: #EC4899;
+    --magenta-deep: #BE2D7E;
+    --gold: #F5B544;
+    --aurora-core: #5D2E9B;
+    --signal: #00D9FF;
+
+    /* color carries meaning */
+    --thinking: #A78BFA;    /* violet = AI thinking */
+    --opportunity: #F5B544; /* gold  = opportunity/perf */
+
+    /* semantic states */
+    --success: #34D399;  --success-bg: #0E2A22;
+    --warning: #FBBF24;  --warning-bg: #2A220C;
+    --danger:  #F87171;  --danger-bg:  #2A1318;
+    --info:    #60A5FA;
   }
 
   * { border-color: hsl(var(--border)); }
@@ -34,59 +83,125 @@
   body {
     @apply bg-background text-foreground antialiased;
     font-feature-settings: "cv11", "ss01", "ss03";
+    /* aurora field — three signature blobs, richer than v1 */
+    background-color: var(--ink);
     background-image:
-      radial-gradient(900px 700px at 10% -10%, hsla(263, 90%, 70%, 0.10), transparent 60%),
-      radial-gradient(1000px 800px at 110% 0%, hsla(188, 95%, 53%, 0.08), transparent 60%),
-      radial-gradient(700px 500px at 90% 100%, hsla(322, 90%, 60%, 0.06), transparent 60%);
+      radial-gradient(1100px 820px at 8% -12%, hsla(263, 70%, 42%, 0.16), transparent 60%),
+      radial-gradient(1150px 880px at 112% -4%, hsla(188, 90%, 45%, 0.13), transparent 60%),
+      radial-gradient(820px 600px at 88% 108%, hsla(322, 80%, 52%, 0.10), transparent 62%);
     background-attachment: fixed;
     min-height: 100dvh;
   }
 
-  /* Subtle film-grain noise overlay — fixed, non-interactive */
+  /* film grain — a brand ingredient at 0.09 (coarse) + a fine static layer */
   body::before {
     content: '';
     position: fixed;
     inset: 0;
     pointer-events: none;
     z-index: 1;
-    opacity: 0.035;
+    opacity: 0.09;
     mix-blend-mode: overlay;
     background-image:
-      url("data:image/svg+xml;utf8,<svg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1, 0 0 0 0 1, 0 0 0 0 1, 0 0 0 0.6 0'/></filter><rect width='200' height='200' filter='url(%23n)'/></svg>");
+      url("data:image/svg+xml;utf8,<svg viewBox='0 0 220 220' xmlns='http://www.w3.org/2000/svg'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.82' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1, 0 0 0 0 1, 0 0 0 0 1, 0 0 0 0.7 0'/></filter><rect width='220' height='220' filter='url(%23n)'/></svg>");
   }
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 1;
+    opacity: 0.04;
+    background-image:
+      url("data:image/svg+xml;utf8,<svg viewBox='0 0 120 120' xmlns='http://www.w3.org/2000/svg'><filter id='f'><feTurbulence type='fractalNoise' baseFrequency='2.2' numOctaves='1' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1, 0 0 0 0 1, 0 0 0 0 1, 0 0 0 0.5 0'/></filter><rect width='120' height='120' filter='url(%23f)'/></svg>");
+  }
+
+  /* Display typography helper class for Space Grotesk */
+  .font-display { font-family: var(--font-space), var(--font-inter), system-ui, sans-serif; }
 }
 
-/* ------------------------------------------------------------------
- *  Reusable utilities
- * ------------------------------------------------------------------ */
+/* ==================================================================
+ *  UTILITIES — surfaces, glass, glow, motion
+ * ================================================================== */
 @layer utilities {
+
+  /* ---- SURFACES (content) — solid, brightness-layered ---- */
+  .surface-0 { background: var(--surface-0); }
+  .surface-1 { background: var(--surface-1); border: 1px solid var(--border-subtle); }
+  .surface-2 { background: var(--surface-2); border: 1px solid var(--border-strong); }
+  .surface-3 { background: var(--surface-3); border: 1px solid var(--border-strong); }
+
+  /* canonical content card: solid, lifts on hover, top-edge sheen */
+  .solid-card {
+    background: var(--surface-1);
+    border: 1px solid var(--border-subtle);
+    box-shadow: inset 0 1px 0 0 rgba(255,255,255,0.05);
+    transition: background 200ms ease, border-color 200ms ease, box-shadow 220ms ease, transform 220ms ease;
+  }
+  .solid-card-hover:hover {
+    background: var(--surface-2);
+    border-color: var(--border-strong);
+    box-shadow:
+      inset 0 1px 0 0 rgba(255,255,255,0.07),
+      0 12px 32px -12px rgba(0,0,0,0.6);
+    transform: translateY(-2px);
+  }
+
+  /* ---- GLASS (floating things: rails, overlays, popovers) ---- */
   .glass {
-    background:
-      linear-gradient(180deg, hsla(230, 22%, 12%, 0.55), hsla(230, 26%, 7%, 0.55));
-    backdrop-filter: blur(14px);
-    -webkit-backdrop-filter: blur(14px);
-    border: 1px solid hsla(220, 14%, 96%, 0.06);
+    background: linear-gradient(180deg, hsla(228,28%,11%,0.72), hsla(230,30%,7%,0.72));
+    backdrop-filter: blur(20px) saturate(140%);
+    -webkit-backdrop-filter: blur(20px) saturate(140%);
+    border: 1px solid rgba(255,255,255,0.07);
+    border-top-color: rgba(255,255,255,0.10);
+  }
+  .glass-frosted {
+    background: linear-gradient(180deg, rgba(14,16,26,0.88), rgba(8,9,16,0.92));
+    backdrop-filter: blur(28px) saturate(160%);
+    -webkit-backdrop-filter: blur(28px) saturate(160%);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-top-color: rgba(255,255,255,0.12);
   }
   .glass-hover {
     transition: border-color 200ms ease, transform 200ms ease, box-shadow 200ms ease;
   }
   .glass-hover:hover {
-    border-color: hsla(188, 95%, 53%, 0.35);
+    border-color: hsla(188, 85%, 53%, 0.35);
     box-shadow:
-      0 0 0 1px hsla(188, 95%, 53%, 0.15),
-      0 24px 60px -24px hsla(188, 95%, 53%, 0.25);
+      0 0 0 1px hsla(188, 85%, 53%, 0.15),
+      0 24px 60px -24px hsla(188, 85%, 53%, 0.25);
     transform: translateY(-2px);
   }
 
+  .inset-sheen { box-shadow: inset 0 1px 0 0 rgba(255,255,255,0.06); }
+
+  /* ---- ELEVATION ---- */
+  .elev-1 { box-shadow: 0 4px 16px -6px rgba(0,0,0,0.5); }
+  .elev-2 { box-shadow: 0 12px 32px -12px rgba(0,0,0,0.6), 0 2px 8px -4px rgba(0,0,0,0.4); }
+  .elev-3 { box-shadow: 0 32px 80px -24px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,255,255,0.04); }
+
+  /* ---- GLOW SYSTEM ---- */
+  .glow-primary { box-shadow: 0 0 0 1px hsla(188,85%,53%,0.5), 0 0 24px -2px hsla(188,85%,53%,0.45); }
+  .glow-thinking { box-shadow: 0 0 32px -4px rgba(139,92,246,0.55), 0 0 0 1px rgba(139,92,246,0.35); }
+  .glow-cta { box-shadow: 0 10px 40px -12px rgba(34,211,238,0.5), 0 0 0 1px rgba(34,211,238,0.2); }
+  .ring-flux { box-shadow: 0 0 0 1px hsla(188,85%,53%,0.5), 0 0 30px hsla(188,85%,53%,0.35); }
+  .ring-thinking { box-shadow: 0 0 0 1px rgba(139,92,246,0.5), 0 0 30px rgba(139,92,246,0.4); }
+
+  /* ---- GRADIENT TEXT / BORDER ---- */
   .gradient-text {
-    background: linear-gradient(135deg, #A78BFA 0%, #22D3EE 50%, #EC4899 100%);
+    background: linear-gradient(120deg, #A78BFA 0%, #22D3EE 52%, #EC4899 100%);
     -webkit-background-clip: text;
     background-clip: text;
     color: transparent;
   }
-  .gradient-border {
-    position: relative;
+  .gradient-text-glow {
+    background: linear-gradient(120deg, #A78BFA 0%, #22D3EE 52%, #EC4899 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    filter: drop-shadow(0 0 24px rgba(139,92,246,0.35));
   }
+  .gradient-border { position: relative; }
   .gradient-border::before {
     content: '';
     position: absolute;
@@ -100,28 +215,61 @@
     pointer-events: none;
   }
 
-  .scroll-hide::-webkit-scrollbar { display: none; }
-  .scroll-hide { scrollbar-width: none; }
+  /* ---- CONIC HALO (generation / loading rings) ---- */
+  .conic-halo {
+    background: conic-gradient(from var(--angle), #8B5CF6, #22D3EE, #EC4899, #8B5CF6);
+    animation: conic-spin 3s linear infinite;
+  }
 
-  /* Hexagonal grid backdrop pattern (used on empty states) */
+  /* ---- PATTERNS ---- */
   .pattern-dots {
     background-image: radial-gradient(circle, hsla(220,14%,96%,0.06) 1px, transparent 1px);
     background-size: 24px 24px;
   }
-
-  /* Pulse-glow ring — used to highlight active items */
-  .ring-flux {
-    box-shadow:
-      0 0 0 1px hsla(188, 95%, 53%, 0.5),
-      0 0 30px hsla(188, 95%, 53%, 0.35);
+  .pattern-grid {
+    background-image:
+      linear-gradient(hsla(220,14%,96%,0.035) 1px, transparent 1px),
+      linear-gradient(90deg, hsla(220,14%,96%,0.035) 1px, transparent 1px);
+    background-size: 48px 48px;
   }
 
-  /* Subtle inner glow on dark panels */
+  .scroll-hide::-webkit-scrollbar { display: none; }
+  .scroll-hide { scrollbar-width: none; }
+
+  /* ---- legacy aliases (kept so existing components don't break) ---- */
   .surface {
-    background: linear-gradient(180deg, hsla(230, 24%, 10%, 0.8) 0%, hsla(230, 26%, 6%, 0.8) 100%);
+    background: linear-gradient(180deg, hsla(230,24%,10%,0.8) 0%, hsla(230,26%,6%,0.8) 100%);
     border: 1px solid hsl(var(--border));
   }
+  .bg-flux-soft { background: linear-gradient(135deg, rgba(167,139,250,0.18) 0%, rgba(34,211,238,0.18) 50%, rgba(236,72,153,0.18) 100%); }
+
+  /* ---- shimmer-sweep — active reasoning (distinct from skeleton) ---- */
+  .shimmer-sweep { position: relative; overflow: hidden; }
+  .shimmer-sweep::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(105deg, transparent 30%, rgba(167,139,250,0.18) 50%, transparent 70%);
+    transform: translateX(-100%);
+    animation: shimmer-sweep 1.6s ease-in-out infinite;
+    pointer-events: none;
+  }
+
+  /* press feedback on any interactive element */
+  .press { transition: transform 90ms ease, filter 90ms ease; }
+  .press:active { transform: scale(0.97); filter: brightness(0.95); }
 }
 
-/* App body app-shell ensures content sits above the noise overlay */
+/* App body shell — content above the grain overlays */
 main, header, aside, nav { position: relative; z-index: 2; }
+
+/* Reduced-motion respect: kill ambient + decorative motion */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}

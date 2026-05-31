@@ -24,32 +24,32 @@ export function CarouselGridCard({ row }: { row: CarouselRow }) {
 
   return (
     <Link
-      href={`/carousels/${row.id}`}
-      className="group relative block overflow-hidden rounded-2xl glass glass-hover"
+      href={`/library/${row.id}`}
+      className="press group relative block overflow-hidden rounded-lg border border-edge-subtle bg-surface-1 transition hover:border-edge-strong"
     >
-      <div className="relative aspect-square w-full bg-secondary/40">
+      <div className="relative aspect-square w-full bg-surface-2">
         {coverUrl ? (
           <Image
             src={coverUrl}
             alt={row.title ?? row.hook ?? 'Carousel cover'}
             fill
             sizes="(max-width: 768px) 50vw, (max-width: 1280px) 33vw, 25vw"
-            className="object-cover transition-transform duration-500 group-hover:scale-[1.03]"
+            className="object-cover transition-transform duration-500 group-hover:scale-[1.04]"
             unoptimized
           />
         ) : (
           <div className="flex h-full w-full items-center justify-center pattern-dots">
-            <Sparkles className="h-8 w-8 text-muted-foreground/50" />
+            <Sparkles className="h-8 w-8 text-fg-dim" />
           </div>
         )}
-        <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/85 to-transparent" />
+        <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-ink/90 to-transparent" />
         <div className="absolute left-3 top-3">
           <Badge variant={STATUS_VARIANT[row.status] ?? 'outline'}>
             {row.status.replace(/_/g, ' ')}
           </Badge>
         </div>
         {slideCount > 0 && (
-          <div className="absolute right-3 top-3 inline-flex items-center gap-1 rounded-full bg-black/60 px-2 py-0.5 text-[11px] font-medium text-white backdrop-blur-md">
+          <div className="absolute right-3 top-3 inline-flex items-center gap-1 rounded-pill bg-black/60 px-2 py-0.5 text-[11px] font-medium text-white backdrop-blur-md">
             <Images className="h-3 w-3" /> {slideCount}
           </div>
         )}
@@ -59,10 +59,10 @@ export function CarouselGridCard({ row }: { row: CarouselRow }) {
           </p>
         </div>
       </div>
-      <div className="flex items-center justify-between px-4 py-3 text-xs text-muted-foreground">
+      <div className="flex items-center justify-between px-4 py-3 text-xs text-fg-muted">
         <span>{fmtRelative(row.updated_at || row.created_at)}</span>
         {row.hashtags?.length > 0 && (
-          <span className="truncate">
+          <span className="truncate text-flux-cyan/80">
             {row.hashtags.slice(0, 2).join(' ')}
             {row.hashtags.length > 2 && ` +${row.hashtags.length - 2}`}
           </span>

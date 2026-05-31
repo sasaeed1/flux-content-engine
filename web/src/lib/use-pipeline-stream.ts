@@ -12,6 +12,7 @@
  * the upstream socket; the engine's req.close handler stops emitting.
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { beginEngineTask, reportEngineActivity } from './use-engine-activity';
 
 export type PipelineEventType =
   | 'started'
@@ -129,17 +130,28 @@ function parseSseBlock(block: string): PipelineEvent | null {
 export function usePipelineStream() {
   const [state, setState] = useState<PipelineStreamState>(INITIAL_STATE);
   const controllerRef = useRef<AbortController | null>(null);
+  // Holds the engine-activity end() callback for the in-flight generation, so
+  // the EnginePulse orb ripples across the whole app while a carousel is being
+  // forged and settles when it lands.
+  const endActivityRef = useRef<(() => void) | null>(null);
+
+  const endActivity = useCallback(() => {
+    endActivityRef.current?.();
+    endActivityRef.current = null;
+  }, []);
 
   const reset = useCallback(() => {
     controllerRef.current?.abort();
     controllerRef.current = null;
+    endActivity();
     setState(INITIAL_STATE);
-  }, []);
+  }, [endActivity]);
 
   // Tear down on unmount so a navigation while in-flight doesn't leak the socket.
   useEffect(
     () => () => {
       controllerRef.current?.abort();
+      endActivityRef.current?.();
     },
     [],
   );
@@ -223,8 +235,13 @@ export function usePipelineStream() {
     async (request: PipelineStreamRequest) => {
       // Any in-flight stream is cancelled before kicking off a new one.
       controllerRef.current?.abort();
+      endActivity();
       const controller = new AbortController();
       controllerRef.current = controller;
+      // Light up the global Engine Pulse for the duration of this generation.
+      endActivityRef.current = beginEngineTask(
+        request.topic ? `Forging: ${request.topic.slice(0, 48)}` : 'Forging a carousel',
+      );
 
       setState({ ...INITIAL_STATE, status: 'connecting' });
 
@@ -245,6 +262,7 @@ export function usePipelineStream() {
 
       if (!res.ok || !res.body) {
         const text = await res.text().catch(() => '');
+        endActivity();
         setState((s) => ({
           ...s,
           status: 'error',
@@ -284,13 +302,16 @@ export function usePipelineStream() {
             ? { ...s, status: 'complete' }
             : s,
         );
+        endActivity();
+        reportEngineActivity('Carousel forged');
       } catch (err) {
+        endActivity();
         if (controller.signal.aborted) return;
         const message = (err as Error).message;
         setState((s) => ({ ...s, status: 'error', error: `Stream read failed: ${message}` }));
       }
     },
-    [apply],
+    [apply, endActivity],
   );
 
   return { state, start, reset };
