@@ -6,7 +6,7 @@ function Skeleton({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
     <div
       className={cn(
         'animate-shimmer rounded-md',
-        'bg-[linear-gradient(110deg,hsl(var(--muted))_8%,hsl(var(--secondary))_18%,hsl(var(--muted))_33%)] bg-[length:200%_100%]',
+        'bg-[linear-gradient(110deg,var(--surface-1)_8%,var(--surface-2)_18%,var(--surface-1)_33%)] bg-[length:200%_100%]',
         className,
       )}
       {...props}

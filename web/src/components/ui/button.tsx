@@ -3,27 +3,40 @@ import { Slot } from '@radix-ui/react-slot';
 import { cva, type VariantProps } from 'class-variance-authority';
 import { cn } from '@/lib/utils';
 
+/**
+ * Button — v2 design system.
+ * Hierarchy: primary (cyan aura CTA) · secondary (solid surface) · ghost ·
+ * destructive · link. Every interactive button gets press-depress + a fast
+ * glow-focus ring. Legacy variant names (default/outline/subtle) are aliased
+ * so existing call-sites keep working.
+ */
 const buttonVariants = cva(
-  'inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg text-sm font-medium ring-offset-background transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:size-4 [&_svg]:shrink-0',
+  'press relative inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-sm text-sm font-semibold transition-all duration-150 outline-none focus-visible:glow-primary disabled:pointer-events-none disabled:opacity-50 [&_svg]:size-4 [&_svg]:shrink-0',
   {
     variants: {
       variant: {
-        default: 'bg-foreground text-background hover:opacity-90',
+        // primary CTA — electric cyan aura
         primary:
-          'relative text-background bg-flux-gradient bg-[length:200%_200%] hover:bg-[position:100%_50%] transition-[background-position] duration-500 shadow-[0_10px_40px_-12px_rgba(34,211,238,0.45)]',
+          'text-flux-ink bg-flux-gradient bg-[length:200%_200%] hover:bg-[position:100%_50%] transition-[background-position,box-shadow] duration-500 glow-cta hover:shadow-[0_14px_48px_-12px_rgba(34,211,238,0.6)]',
+        // secondary — raised solid surface
+        secondary:
+          'bg-surface-2 text-fg border border-edge-strong hover:bg-surface-3 hover:border-edge-glow inset-sheen',
+        // neutral high-contrast (old "default")
+        default: 'bg-fg text-flux-ink hover:opacity-90',
         outline:
-          'border border-border bg-transparent hover:bg-muted/50 hover:border-primary/40',
-        ghost: 'hover:bg-muted/40',
-        subtle: 'bg-muted text-foreground hover:bg-muted/70',
+          'border border-edge-strong bg-transparent text-fg hover:bg-surface-2 hover:border-flux-cyan/40',
+        ghost: 'text-fg-muted hover:bg-surface-2 hover:text-fg',
+        subtle: 'bg-surface-2 text-fg hover:bg-surface-3',
         destructive:
-          'bg-destructive text-destructive-foreground hover:opacity-90 shadow-[0_8px_24px_-12px_rgba(239,68,68,0.5)]',
-        link: 'text-primary underline-offset-4 hover:underline',
+          'bg-state-danger/90 text-flux-ink hover:bg-state-danger shadow-[0_8px_24px_-12px_rgba(248,113,113,0.5)]',
+        link: 'text-flux-cyan underline-offset-4 hover:underline',
       },
       size: {
         default: 'h-10 px-5 py-2',
         sm: 'h-8 px-3 text-xs',
-        lg: 'h-11 px-7 text-base',
-        icon: 'h-9 w-9',
+        lg: 'h-12 px-7 text-base',
+        icon: 'h-9 w-9 px-0',
+        'icon-sm': 'h-8 w-8 px-0',
       },
     },
     defaultVariants: { variant: 'default', size: 'default' },

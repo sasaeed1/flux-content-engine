@@ -25,15 +25,13 @@ export function PageHeader({
     >
       <div className="space-y-2">
         {eyebrow && (
-          <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-muted-foreground">
-            {eyebrow}
-          </p>
+          <p className="text-label text-fg-muted">{eyebrow}</p>
         )}
-        <h1 className="text-2xl font-semibold tracking-tight sm:text-4xl">{title}</h1>
+        <h1 className="font-display text-2xl font-semibold tracking-tight sm:text-4xl">
+          {title}
+        </h1>
         {subtitle && (
-          <p className="max-w-2xl text-sm text-muted-foreground sm:text-base">
-            {subtitle}
-          </p>
+          <p className="max-w-2xl text-sm text-fg-muted sm:text-base">{subtitle}</p>
         )}
       </div>
       {actions && <div className="flex flex-wrap gap-2">{actions}</div>}
