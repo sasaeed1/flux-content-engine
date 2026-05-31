@@ -109,6 +109,22 @@ export function WorkspaceModeSwitcher({ initialMode, setMode, getMode }: Props) 
   const activeMode = WORKSPACE_MODES.find((m) => m.key === active) ?? WORKSPACE_MODES[0];
   const ActiveIcon = activeMode.icon;
 
+  // Mode behavior: recolor the workspace accent. Writes --mode-accent + a
+  // data-flux-mode attribute on <html> so the rail, pulse, and CTAs can tint
+  // by posture — modes finally have a visible effect (audit: were visual-only).
+  useEffect(() => {
+    const ACCENTS: Record<string, string> = {
+      creator: '#A78BFA',
+      campaign: '#EC4899',
+      motion: '#22D3EE',
+      strategy: '#34D399',
+      analytics: '#F5B544',
+    };
+    const root = document.documentElement;
+    root.dataset.fluxMode = active;
+    root.style.setProperty('--mode-accent', ACCENTS[active] ?? '#A78BFA');
+  }, [active]);
+
   const pick = (key: string) => {
     if (key === active) {
       setOpen(false);

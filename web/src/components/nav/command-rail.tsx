@@ -190,7 +190,10 @@ export function CommandRail({ modeSlot }: { modeSlot?: React.ReactNode }) {
             </button>
           </div>
         ) : (
-          <div className="rounded-md border border-edge-subtle bg-surface-1 px-3 py-2.5">
+          <div
+            className="rounded-md border border-edge-subtle bg-surface-1 px-3 py-2.5"
+            style={{ borderLeftWidth: '2px', borderLeftColor: 'var(--mode-accent, #A78BFA)' }}
+          >
             <EnginePulse expanded />
           </div>
         )}
