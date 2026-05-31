@@ -58,9 +58,11 @@ interface Props {
   className?: string;
   /** Show the live "PLAYING" indicator strip. Default true. */
   showHud?: boolean;
+  /** Override the hook copy — lets the Forge preview YOUR actual words. */
+  hookText?: string;
 }
 
-export function MotionPreview({ style, className, showHud = true }: Props) {
+export function MotionPreview({ style, className, showHud = true, hookText: hookOverride }: Props) {
   const reactId = useId();
   // Bump a tick to force-restart keyframes when the style key changes
   const [tick, setTick] = useState(0);
@@ -223,7 +225,9 @@ export function MotionPreview({ style, className, showHud = true }: Props) {
     }
   `;
 
-  const hookText = 'YOUR HOOK LANDS HERE';
+  const hookText = (hookOverride && hookOverride.trim().length > 0
+    ? hookOverride.toUpperCase().slice(0, 60)
+    : 'YOUR HOOK LANDS HERE');
   const subText = `${style.name} · ${philosophy} ${(intensity * 100).toFixed(0)}%`;
 
   // For kinetic, split into spans with staggered delays.
