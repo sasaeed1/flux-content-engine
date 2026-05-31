@@ -2,6 +2,7 @@ import { CommandRail } from '@/components/nav/command-rail';
 import { MobileNav } from '@/components/nav/mobile-nav';
 import { Topbar } from '@/components/nav/topbar';
 import { CommandPalette } from '@/components/flux/command-palette';
+import { CopilotPanel } from '@/components/flux/copilot-panel';
 import { PageTransition } from '@/components/flux/page-transition';
 import { WorkspaceModeSwitcher } from '@/components/flux/workspace-mode-switcher';
 import {
@@ -41,6 +42,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
       {/* Cmd/Ctrl+K opens this — always mounted at the app shell */}
       <CommandPalette />
+
+      {/* Contextual Copilot — summon via Topbar Bot button or Cmd/Ctrl+J */}
+      <CopilotPanel />
     </div>
   );
 }
