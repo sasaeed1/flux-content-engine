@@ -58,24 +58,24 @@ export default async function HomePage() {
   let niche: string | null = null;
   let connectionError: string | null = null;
 
+  // Perf: every engine→Supabase call is ~1s, so fan out ALL of them at once
+  // (the old code awaited api.brand() sequentially afterward, adding ~1.5s to
+  // every home load). `brand` is only used for niche-flavored sparks — low
+  // value, so it rides the same parallel batch and is fully optional.
   try {
-    const [ov, ins, lib, rr] = await Promise.allSettled([
+    const [ov, ins, lib, rr, br] = await Promise.allSettled([
       api.overview(),
       api.intelligence.insights('dashboard'),
-      api.listCarousels(24),
+      api.listCarousels(12),
       api.recentRuns(6),
+      api.brand(),
     ]);
     if (ov.status === 'fulfilled') overview = ov.value.overview;
     if (ins.status === 'fulfilled') insights = ins.value.insights as InsightCard[];
     if (lib.status === 'fulfilled') carousels = lib.value.carousels;
     if (rr.status === 'fulfilled') runs = rr.value.runs;
+    if (br.status === 'fulfilled') niche = br.value.default?.niche ?? null;
     if (ov.status === 'rejected') connectionError = 'Engine unreachable.';
-    try {
-      const b = await api.brand();
-      niche = b.default?.niche ?? null;
-    } catch {
-      /* optional */
-    }
   } catch (err) {
     connectionError = err instanceof Error ? err.message : 'Engine unreachable.';
   }

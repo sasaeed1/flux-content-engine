@@ -1,9 +1,11 @@
-import Link from 'next/link';
 import { Fingerprint, Palette } from 'lucide-react';
+import Link from 'next/link';
 import { PageHeader } from '@/components/flux/page-header';
 import { BrandForm } from '@/components/brand/brand-form';
 import { ThemeCard } from '@/components/themes/theme-card';
+import { StyleGallery } from '@/components/brand/style-gallery';
 import { api } from '@/lib/api-client';
+import type { StyleMode } from '@/components/flux/style-tile';
 
 export const dynamic = 'force-dynamic';
 export const metadata = { title: 'Brand Studio' };
@@ -21,7 +23,15 @@ export default async function BrandStudioPage({
   const { tab } = await searchParams;
   const activeTab = tab === 'looks' ? 'looks' : 'voice';
 
-  const [{ default: brand }, { themes }] = await Promise.all([api.brand(), api.themes()]);
+  // Fetch in parallel; the Looks tab also needs the 40 style modes.
+  const [brandRes, themesRes, stylesRes] = await Promise.allSettled([
+    api.brand(),
+    api.themes(),
+    api.intelligence.styles(),
+  ]);
+  const brand = brandRes.status === 'fulfilled' ? brandRes.value.default : null;
+  const themes = themesRes.status === 'fulfilled' ? themesRes.value.themes : [];
+  const styles: StyleMode[] = stylesRes.status === 'fulfilled' ? stylesRes.value.styles : [];
 
   return (
     <div className="space-y-6">
@@ -72,26 +82,51 @@ export default async function BrandStudioPage({
 
       {/* Looks */}
       {activeTab === 'looks' && (
-        <div className="space-y-3">
-          <p className="text-sm text-fg-muted">
-            Pick the preset on your brand profile — every carousel inherits its colors, type, and
-            visual tone. For the 40 cinematic style modes, open the{' '}
-            <Link href="/forge" className="text-flux-cyan hover:underline">
-              Forge
-            </Link>
-            .
-          </p>
-          {themes.length === 0 ? (
-            <div className="solid-card rounded-2xl p-10 text-center text-sm text-fg-muted">
-              No themes available yet. Seed your workspace with the system presets.
+        <div className="space-y-8">
+          {/* The 40 cinematic style modes — static grid + live motion preview */}
+          <section className="space-y-3">
+            <div>
+              <h2 className="font-display text-lg font-semibold tracking-tight">Style modes</h2>
+              <p className="text-sm text-fg-muted">
+                40 cinematic looks — each a full personality (typography, palette, motion, effects).
+                Browse the static grid, watch any one animate, then apply it when you{' '}
+                <Link href="/forge" className="text-flux-cyan hover:underline">
+                  forge
+                </Link>
+                .
+              </p>
             </div>
-          ) : (
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {themes.map((t) => (
-                <ThemeCard key={t.id} theme={t} />
-              ))}
+            {styles.length === 0 ? (
+              <div className="solid-card rounded-2xl p-10 text-center text-sm text-fg-muted">
+                Style modes aren&apos;t loaded yet. They seed automatically on the engine — refresh
+                in a moment.
+              </div>
+            ) : (
+              <StyleGallery styles={styles} />
+            )}
+          </section>
+
+          {/* Theme presets — the simpler color/type packs */}
+          <section className="space-y-3">
+            <div>
+              <h2 className="font-display text-lg font-semibold tracking-tight">Theme presets</h2>
+              <p className="text-sm text-fg-muted">
+                Quick color + type packs. Set one as your brand default — every carousel inherits it
+                unless a style mode overrides.
+              </p>
             </div>
-          )}
+            {themes.length === 0 ? (
+              <div className="solid-card rounded-2xl p-8 text-center text-sm text-fg-muted">
+                No theme presets yet.
+              </div>
+            ) : (
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {themes.map((t) => (
+                  <ThemeCard key={t.id} theme={t} />
+                ))}
+              </div>
+            )}
+          </section>
         </div>
       )}
     </div>
