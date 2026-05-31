@@ -22,6 +22,7 @@ import {
 } from '../db/repositories';
 import { supabase } from '../lib/supabase';
 import { uploadBuffer, storagePaths } from '../lib/storage';
+import { cacheGet, cacheSet } from '../lib/microCache';
 import { env } from '../config/env';
 import crypto from 'node:crypto';
 import { loadBrandProfile } from '../modules/brand/brandService';
@@ -49,7 +50,15 @@ router.get(
 router.get(
   '/tenant/overview',
   asyncHandler(async (req, res) => {
-    const overview = await getOrgOverview(req.tenant!.organizationId);
+    const orgId = req.tenant!.organizationId;
+    const key = `overview:${orgId}`;
+    const cached = cacheGet<unknown>(key);
+    if (cached !== null) {
+      res.json({ overview: cached });
+      return;
+    }
+    const overview = await getOrgOverview(orgId);
+    cacheSet(key, overview, 15_000); // 15s — stats tolerate brief staleness
     res.json({ overview });
   }),
 );

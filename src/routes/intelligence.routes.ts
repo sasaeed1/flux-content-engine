@@ -23,6 +23,7 @@ import { dailySummary as quotaSummary } from '../ai/quotaTracker';
 import { supabase } from '../lib/supabase';
 import { HOOK_ARCHETYPES, getRecentHistory } from '../modules/content/historyService';
 import { renderPerformanceMemoryBlock } from '../modules/intelligence/memoryPromptBlock';
+import { cacheGet, cacheSet, cacheBust } from '../lib/microCache';
 import { childLogger } from '../lib/logger';
 
 const router = Router();
@@ -197,6 +198,13 @@ router.get(
     const orgId = req.tenant!.organizationId;
     const surface = (req.query.surface as string) || 'dashboard';
 
+    const key = `insights:${orgId}:${surface}`;
+    const cached = cacheGet<unknown[]>(key);
+    if (cached !== null) {
+      res.json({ insights: cached });
+      return;
+    }
+
     const { data, error } = await supabase
       .from('ai_insights')
       .select('id, kind, headline, body, cta_label, cta_href, score, created_at')
@@ -207,7 +215,9 @@ router.get(
       .order('score', { ascending: false })
       .limit(3);
     if (error) throw new AppError(error.message, { status: 500, code: 'INSIGHTS_FETCH' });
-    res.json({ insights: data ?? [] });
+    const insights = data ?? [];
+    cacheSet(key, insights, 12_000); // 12s; busted on dismiss/refresh
+    res.json({ insights });
   }),
 );
 
@@ -220,6 +230,7 @@ router.post(
       .update({ dismissed_at: new Date().toISOString() })
       .eq('organization_id', orgId)
       .eq('id', req.params.id);
+    cacheBust(`insights:${orgId}:`); // drop all surfaces for this org
     res.json({ ok: true });
   }),
 );
@@ -360,6 +371,12 @@ router.get(
   '/tenant/intelligence/styles',
   asyncHandler(async (req, res) => {
     const orgId = req.tenant!.organizationId;
+    const key = `styles:${orgId}`;
+    const cached = cacheGet<unknown[]>(key);
+    if (cached !== null) {
+      res.json({ styles: cached });
+      return;
+    }
     const { data, error } = await supabase
       .from('style_modes')
       .select(
@@ -370,7 +387,9 @@ router.get(
       .order('category')
       .order('name');
     if (error) throw new AppError(error.message, { status: 500, code: 'STYLES_FETCH' });
-    res.json({ styles: data ?? [] });
+    const styles = data ?? [];
+    cacheSet(key, styles, 120_000); // 120s — system style modes change rarely
+    res.json({ styles });
   }),
 );
 
@@ -385,6 +404,7 @@ router.post(
     const orgId = req.tenant!.organizationId;
     const { generateInsightsForOrg } = await import('../modules/intelligence/insightsGenerator');
     const inserted = await generateInsightsForOrg(orgId);
+    cacheBust(`insights:${orgId}:`); // freshly generated — drop stale cache
     res.json({ ok: true, inserted });
   }),
 );
