@@ -15,6 +15,7 @@ import { usePipelineStream } from '@/lib/use-pipeline-stream';
 import { seedForgeTopicAction } from '@/app/(app)/forge/actions';
 import { ForgeChamber } from './forge-chamber';
 import { CreationBar } from './creation-bar';
+import { VariationsBar } from './variations-bar';
 
 function recommendStyle(topic: string, styles: StyleMode[]): string | null {
   const t = topic.toLowerCase();
@@ -55,6 +56,13 @@ export function ForgeWrapper({
 
   const selectedStyle = styles.find((s) => s.key === selectedKey) ?? null;
 
+  // Resolve hook / cta slide indices from the streamed content for the
+  // sculpt actions in the settled footer.
+  const hookIndex =
+    state.content?.slides?.find((s) => s.role === 'hook')?.index ?? 0;
+  const ctaIndex =
+    state.content?.slides?.find((s) => s.role === 'cta')?.index ?? null;
+
   const onIgnite = () => {
     if (!topic.trim() || busy) return;
     void (async () => {
@@ -79,6 +87,16 @@ export function ForgeWrapper({
           topic={topic}
           recommended={!!recommendedKey && recommendedKey === selectedKey}
           onReset={reset}
+          footerSlot={
+            state.carouselId ? (
+              <VariationsBar
+                carouselId={state.carouselId}
+                hookIndex={hookIndex}
+                ctaIndex={ctaIndex}
+                styles={styles}
+              />
+            ) : null
+          }
         />
       </div>
 
