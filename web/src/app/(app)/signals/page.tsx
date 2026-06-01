@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { Activity, Eye, Send, TrendingUp, Wand2 } from 'lucide-react';
 import { PageHeader } from '@/components/flux/page-header';
 import { RankList } from '@/components/signals/rank-list';
+import { WeeklyBriefing, type BriefingCard } from '@/components/signals/weekly-briefing';
 import { api } from '@/lib/api-client';
 import type { OrgOverview } from '@/lib/types';
 
@@ -18,11 +19,28 @@ interface PerfTop {
 export default async function SignalsPage() {
   let overview: OrgOverview | null = null;
   let perf: PerfTop = { sample_size: 0, top_hooks: [], top_styles: [], top_ctas: [] };
+  let briefing: BriefingCard | null = null;
 
   try {
-    const [ov, pt] = await Promise.allSettled([api.overview(), api.intelligence.performanceTop()]);
+    const [ov, pt, ins] = await Promise.allSettled([
+      api.overview(),
+      api.intelligence.performanceTop(),
+      api.intelligence.insights('signals'),
+    ]);
     if (ov.status === 'fulfilled') overview = ov.value.overview;
     if (pt.status === 'fulfilled') perf = pt.value as PerfTop;
+    if (ins.status === 'fulfilled') {
+      const weekly = ins.value.insights.find((i) => i.kind === 'weekly');
+      if (weekly) {
+        briefing = {
+          headline: weekly.headline,
+          body: weekly.body,
+          cta_label: weekly.cta_label,
+          cta_href: weekly.cta_href,
+          created_at: weekly.created_at,
+        };
+      }
+    }
   } catch {
     /* keep empties */
   }
@@ -41,6 +59,9 @@ export default async function SignalsPage() {
         }
         subtitle="What's resonating — the patterns Flux is learning from your published work and feeding back into every new generation."
       />
+
+      {/* AI weekly briefing */}
+      <WeeklyBriefing initial={briefing} />
 
       {/* headline metrics */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">

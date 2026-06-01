@@ -469,6 +469,23 @@ router.get(
 );
 
 /* ============================================================
+ *  /weekly-summary/refresh — Sprint E: generate this org's weekly briefing
+ *  on demand (the scheduler also runs it Mondays 09:00).
+ * ============================================================ */
+
+router.post(
+  '/tenant/intelligence/weekly-summary/refresh',
+  asyncHandler(async (req, res) => {
+    const orgId = req.tenant!.organizationId;
+    const { generateWeeklySummaryForOrg } = await import(
+      '../modules/intelligence/weeklySummary'
+    );
+    const written = await generateWeeklySummaryForOrg(orgId);
+    res.json({ ok: true, written });
+  }),
+);
+
+/* ============================================================
  *  /performance/rollup — Phase 3D manual rollup trigger.
  *  Reads the org's recent analytics and folds them into
  *  content_performance, which drives the bias on future generation.

@@ -14,6 +14,8 @@ import { env } from '../config/env';
 import { processPublishQueue } from '../queue/publishWorker';
 import { processFailedJobs } from '../queue/retryWorker';
 import { collectRecentAnalytics } from '../modules/analytics/analyticsService';
+import { refreshAllInsights } from '../modules/intelligence/insightsScheduler';
+import { generateAllWeeklySummaries } from '../modules/intelligence/weeklySummary';
 import { toErrorMessage } from '../lib/errors';
 import { childLogger } from '../lib/logger';
 
@@ -60,6 +62,10 @@ export function startScheduler(): void {
   register('publish-queue', env.PUBLISH_QUEUE_CRON, () => processPublishQueue(10));
   register('retry-worker', env.RETRY_CRON, () => processFailedJobs(5));
   register('analytics', env.ANALYTICS_CRON, () => collectRecentAnalytics(96));
+  // AI presence cards — refresh every 6h for active orgs.
+  register('ai-insights', '0 */6 * * *', () => refreshAllInsights());
+  // Sprint E — weekly AI briefing, Mondays 09:00 (engine TZ).
+  register('weekly-summary', '0 9 * * 1', () => generateAllWeeklySummaries());
 
   log.info({ jobs: tasks.length }, 'Internal scheduler started');
 }

@@ -318,6 +318,12 @@ export const api = {
         '/api/tenant/intelligence/insights/refresh',
         { method: 'POST', json: {} },
       ),
+    // Sprint E — generate this org's weekly AI briefing on demand.
+    refreshWeeklySummary: () =>
+      engineFetch<{ ok: true; written: boolean }>(
+        '/api/tenant/intelligence/weekly-summary/refresh',
+        { method: 'POST', json: {} },
+      ),
     styles: () =>
       engineFetch<{
         styles: Array<{
