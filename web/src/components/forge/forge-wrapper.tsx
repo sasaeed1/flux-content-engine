@@ -16,6 +16,7 @@ import { seedForgeTopicAction } from '@/app/(app)/forge/actions';
 import { ForgeChamber } from './forge-chamber';
 import { CreationBar } from './creation-bar';
 import { VariationsBar } from './variations-bar';
+import { DraftEditor } from './draft-editor';
 
 function recommendStyle(topic: string, styles: StyleMode[]): string | null {
   const t = topic.toLowerCase();
@@ -44,6 +45,7 @@ export function ForgeWrapper({
 }) {
   const [topic, setTopic] = useState(initialSeed);
   const [selectedKey, setSelectedKey] = useState<string | null>(styles[0]?.key ?? null);
+  const [draftFirst, setDraftFirst] = useState(false);
   const { state, start, reset } = usePipelineStream();
 
   const busy = state.status === 'connecting' || state.status === 'running';
@@ -73,6 +75,7 @@ export function ForgeWrapper({
         brandProfileId: seed.brandProfileId ?? undefined,
         styleModeKey: selectedKey ?? undefined,
         approvalMode: 'manual',
+        draftOnly: draftFirst,
       });
     })();
   };
@@ -88,7 +91,12 @@ export function ForgeWrapper({
           recommended={!!recommendedKey && recommendedKey === selectedKey}
           onReset={reset}
           footerSlot={
-            state.carouselId ? (
+            state.isDraft && state.carouselId ? (
+              <DraftEditor
+                carouselId={state.carouselId}
+                slides={(state.content?.slides ?? []) as Parameters<typeof DraftEditor>[0]['slides']}
+              />
+            ) : state.carouselId ? (
               <VariationsBar
                 carouselId={state.carouselId}
                 hookIndex={hookIndex}
@@ -112,6 +120,8 @@ export function ForgeWrapper({
           sparks={sparks}
           busy={busy}
           onIgnite={onIgnite}
+          draftFirst={draftFirst}
+          setDraftFirst={setDraftFirst}
         />
       )}
     </div>

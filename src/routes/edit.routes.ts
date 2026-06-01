@@ -282,6 +282,64 @@ router.post(
   }),
 );
 
+/* ----- Sprint D — render a draft carousel (after inline edits) ----- */
+// Renders the carousel's CURRENT (possibly edited) slide text into images
+// under its existing style mode, then flips status draft → ready. The Forge
+// calls this when the user finishes editing the streamed draft.
+router.post(
+  '/tenant/carousels/:id/render',
+  asyncHandler(async (req, res) => {
+    const orgId = req.tenant!.organizationId;
+    const carouselId = req.params.id;
+
+    const carousel = await getCarouselByIdScoped(orgId, carouselId);
+    if (!carousel) throw new NotFoundError(`Carousel ${carouselId} not found`);
+    const slides = (carousel.slides as SlideContent[] | null) ?? [];
+    if (slides.length === 0) throw new ValidationError('Carousel has no slides to render');
+
+    const org = await getOrgById(orgId);
+    if (!org) throw new AppError('Organization vanished', { status: 500, code: 'ORG_MISSING' });
+    const brand = await loadBrandProfile(orgId, carousel.brand_profile_id ?? null);
+    const template = await loadTemplate(org.id, defaultTemplateKeyForType('carousel'));
+
+    const meta = (carousel.metadata as Record<string, unknown> | null) ?? {};
+    const styleKey =
+      (typeof req.body?.styleModeKey === 'string' && req.body.styleModeKey) ||
+      (meta.style_mode_key as string | undefined) ||
+      undefined;
+    const styleMode = styleKey ? await loadStyleMode(orgId, styleKey) : null;
+
+    log.info({ carouselId, styleKey, slideCount: slides.length }, 'Rendering draft carousel');
+    const rendered = await composeSlides({
+      orgId,
+      runId: (carousel.run_id as string | null) ?? carouselId,
+      brand,
+      template,
+      slides,
+      styleMode,
+    });
+
+    const slidesWithUrls = slides.map((s, i) => ({
+      ...s,
+      imageUrl: rendered[i]?.publicUrl,
+      storagePath: rendered[i]?.storagePath,
+    }));
+    await updateCarousel(orgId, carouselId, {
+      slides: slidesWithUrls as unknown as Record<string, unknown>,
+      status: 'ready',
+      metadata: { ...meta, rendered_at: new Date().toISOString() } as Record<string, unknown>,
+    });
+
+    res.json({
+      ok: true,
+      carouselId,
+      status: 'ready',
+      slides: slidesWithUrls,
+      imageUrls: rendered.map((r) => r.publicUrl),
+    });
+  }),
+);
+
 /* ----- bulk approve ----- */
 
 router.post(

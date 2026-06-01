@@ -194,6 +194,12 @@ export interface PipelineOptions {
   /** Optional style mode key from `style_modes.key` — Studio passes this through. */
   styleModeKey?: string;
   suppressFailureLog?: boolean;
+  /**
+   * Sprint D — draft-first generation. When true, the pipeline generates and
+   * persists the slide SCRIPT (status='draft') then stops BEFORE rendering, so
+   * the user can edit each slide's text in the Forge and render on command.
+   */
+  draftOnly?: boolean;
 }
 
 export interface PipelineResult {

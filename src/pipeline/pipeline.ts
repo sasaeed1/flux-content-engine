@@ -227,7 +227,7 @@ export async function runPipeline(
         cta: carouselContent.cta,
         slides: carouselContent.slides as unknown as Record<string, unknown>,
         slide_count: carouselContent.slides.length,
-        status: 'ready',
+        status: options.draftOnly ? 'draft' : 'ready',
         metadata: {
           hook_archetype: cc.hookArchetype ?? null,
           layout_archetypes: cc.layoutArchetypes ?? [],
@@ -238,6 +238,43 @@ export async function runPipeline(
         } as Record<string, unknown>,
       });
       carouselId = row.id;
+
+      // Sprint D — draft-first: stop BEFORE rendering so the user can edit
+      // each slide's text in the Forge, then trigger the render endpoint.
+      if (options.draftOnly) {
+        await markTopicGenerated(topic, 'manual');
+        await updateRun(run.id, {
+          status: 'completed',
+          current_step: 'content',
+          finished_at: nowIso(),
+          metadata: { ...(run.metadata as object), draftOnly: true },
+        });
+        emit(
+          sink,
+          'draft_ready',
+          {
+            carouselId,
+            slideCount: carouselContent.slides.length,
+            slides: carouselContent.slides.map((s) => ({
+              index: s.index,
+              role: s.role,
+              layout: s.layout,
+              data: s.data,
+            })),
+          },
+          run.id,
+        );
+        emit(sink, 'complete', { status: 'draft', carouselId }, run.id);
+        log.info({ carouselId }, 'Draft generated — awaiting edits + render');
+        return {
+          runId: run.id,
+          status: 'pending_approval',
+          organizationId: org.id,
+          topicId: topic.id,
+          carouselId,
+          imageUrls: [],
+        };
+      }
     } else if (singleContent) {
       const row = await insertPost({
         organization_id: org.id,

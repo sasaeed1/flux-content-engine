@@ -30,3 +30,18 @@ export async function seedForgeTopicAction(topic: string): Promise<{
 
   return { topicId, brandProfileId };
 }
+
+/** Persist an edited draft slide's data (Sprint D inline editing). */
+export async function saveDraftSlideAction(
+  carouselId: string,
+  idx: number,
+  data: Record<string, unknown>,
+) {
+  return await api.setSlide(carouselId, idx, data);
+}
+
+/** Render an edited draft carousel into images and flip it to 'ready'. */
+export async function renderDraftAction(carouselId: string) {
+  const res = await api.renderCarousel(carouselId);
+  return res;
+}

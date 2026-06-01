@@ -215,6 +215,16 @@ export const api = {
       json: { style },
     }),
 
+  // Sprint D — render a draft carousel's current (edited) slides → images
+  renderCarousel: (id: string) =>
+    engineFetch<{
+      ok: true;
+      carouselId: string;
+      status: string;
+      imageUrls: string[];
+      slides: Array<{ imageUrl?: string; storagePath?: string; [k: string]: unknown }>;
+    }>(`/api/tenant/carousels/${id}/render`, { method: 'POST', json: {} }),
+
   // Post-audit #4 — live theme reapply on an existing carousel (no full pipeline rerun)
   restyleCarousel: (id: string, styleModeKey: string) =>
     engineFetch<{

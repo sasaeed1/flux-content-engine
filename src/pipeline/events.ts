@@ -20,6 +20,7 @@ export type PipelineEventType =
   | 'template_loaded'
   | 'content_generated'
   | 'persisted'
+  | 'draft_ready'
   | 'render_started'
   | 'slide_rendered'
   | 'render_complete'

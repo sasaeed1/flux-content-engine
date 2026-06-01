@@ -22,6 +22,7 @@ export type PipelineEventType =
   | 'template_loaded'
   | 'content_generated'
   | 'persisted'
+  | 'draft_ready'
   | 'render_started'
   | 'slide_rendered'
   | 'render_complete'
@@ -73,6 +74,8 @@ export interface PipelineStreamState {
   carouselId: string | null;
   postId: string | null;
   imageUrls: string[];
+  /** Sprint D — true when the run stopped at draft (script ready, not rendered). */
+  isDraft: boolean;
   error: string | null;
   events: PipelineEvent[];
 }
@@ -90,6 +93,7 @@ const INITIAL_STATE: PipelineStreamState = {
   carouselId: null,
   postId: null,
   imageUrls: [],
+  isDraft: false,
   error: null,
   events: [],
 };
@@ -100,6 +104,7 @@ export interface PipelineStreamRequest {
   styleModeKey?: string;
   brandProfileId?: string;
   templateKey?: string;
+  draftOnly?: boolean;
   approvalMode?: 'auto' | 'manual';
 }
 
@@ -187,6 +192,15 @@ export function usePipelineStream() {
             slides: p.slides as ContentPreview['slides'] | undefined,
           };
           if (!next.totalSlides) next.totalSlides = (p.slideCount as number) ?? 0;
+          break;
+        case 'draft_ready':
+          next.isDraft = true;
+          next.carouselId = (p.carouselId as string) ?? next.carouselId;
+          next.content = {
+            kind: 'carousel',
+            slideCount: (p.slideCount as number) ?? 0,
+            slides: p.slides as ContentPreview['slides'] | undefined,
+          };
           break;
         case 'render_started':
           next.totalSlides = (p.totalSlides as number) ?? next.totalSlides;

@@ -34,6 +34,8 @@ export function CreationBar({
   sparks,
   busy,
   onIgnite,
+  draftFirst,
+  setDraftFirst,
 }: {
   topic: string;
   setTopic: (v: string) => void;
@@ -44,6 +46,8 @@ export function CreationBar({
   sparks: string[];
   busy: boolean;
   onIgnite: () => void;
+  draftFirst: boolean;
+  setDraftFirst: (v: boolean) => void;
 }) {
   const [angles, setAngles] = useState<string[]>([]);
   const [thinking, startThinking] = useTransition();
@@ -102,6 +106,31 @@ export function CreationBar({
           )}
         </div>
       )}
+
+      {/* draft-first toggle */}
+      <div className="flex items-center justify-end px-1">
+        <button
+          type="button"
+          onClick={() => setDraftFirst(!draftFirst)}
+          className="press inline-flex items-center gap-2 rounded-pill border border-edge-subtle bg-surface-1 py-1 pl-1.5 pr-3 text-[11.5px] text-fg-muted transition hover:border-edge-strong"
+          title="Edit the script before rendering"
+        >
+          <span
+            className={cn(
+              'flex h-4 w-7 items-center rounded-full p-0.5 transition',
+              draftFirst ? 'bg-flux-violet/70' : 'bg-surface-3',
+            )}
+          >
+            <span
+              className={cn(
+                'h-3 w-3 rounded-full bg-white transition-transform',
+                draftFirst && 'translate-x-3',
+              )}
+            />
+          </span>
+          Draft first — edit before render
+        </button>
+      </div>
 
       {/* style strip */}
       <div className="flex items-center gap-2">

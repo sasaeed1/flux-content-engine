@@ -39,6 +39,7 @@ function buildPipelineOptions(orgId: string, body: Record<string, unknown>): Pip
       typeof body.styleModeKey === 'string' && body.styleModeKey.length > 0
         ? body.styleModeKey
         : undefined,
+    draftOnly: body.draftOnly === true,
   };
 }
 

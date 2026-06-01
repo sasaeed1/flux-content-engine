@@ -116,20 +116,22 @@ export function ForgeChamber({
         </div>
       )}
 
-      {/* slide grid */}
-      <div className="flex flex-wrap gap-3">
-        {tiles.length === 0 ? (
-          <div className="flex w-full items-center justify-center py-12">
-            <div className="relative h-14 w-14">
-              <div className="conic-halo absolute inset-0 rounded-full opacity-70" />
-              <div className="absolute inset-1 rounded-full bg-surface-0" />
-              <Sparkles className="absolute inset-0 m-auto h-5 w-5 text-flux-violet-bright" />
+      {/* slide grid — suppressed in draft mode (no images yet; DraftEditor shows) */}
+      {!state.isDraft && (
+        <div className="flex flex-wrap gap-3">
+          {tiles.length === 0 ? (
+            <div className="flex w-full items-center justify-center py-12">
+              <div className="relative h-14 w-14">
+                <div className="conic-halo absolute inset-0 rounded-full opacity-70" />
+                <div className="absolute inset-1 rounded-full bg-surface-0" />
+                <Sparkles className="absolute inset-0 m-auto h-5 w-5 text-flux-violet-bright" />
+              </div>
             </div>
-          </div>
-        ) : (
-          tiles.map((t) => <ForgeSlideTile key={t.index} tile={t} size={180} />)
-        )}
-      </div>
+          ) : (
+            tiles.map((t) => <ForgeSlideTile key={t.index} tile={t} size={180} />)
+          )}
+        </div>
+      )}
 
       {/* error */}
       {error && (
@@ -145,20 +147,22 @@ export function ForgeChamber({
       {/* settled footer */}
       {done && (
         <div className="space-y-4">
-          <div className="flex items-center gap-2 rounded-lg border border-state-success/30 bg-state-success-bg px-4 py-2.5 text-sm text-state-success">
-            <CheckCircle2 className="h-4 w-4" />
-            <span className="flex-1">
-              {state.slides.length} slide{state.slides.length === 1 ? '' : 's'} forged. Sculpt it, or ship it.
-            </span>
-            {state.carouselId && (
-              <Link
-                href={`/library/${state.carouselId}`}
-                className="press inline-flex items-center gap-1 font-semibold text-state-success underline-offset-2 hover:underline"
-              >
-                Open in detail <ArrowRight className="h-3.5 w-3.5" />
-              </Link>
-            )}
-          </div>
+          {!state.isDraft && (
+            <div className="flex items-center gap-2 rounded-lg border border-state-success/30 bg-state-success-bg px-4 py-2.5 text-sm text-state-success">
+              <CheckCircle2 className="h-4 w-4" />
+              <span className="flex-1">
+                {state.slides.length} slide{state.slides.length === 1 ? '' : 's'} forged. Sculpt it, or ship it.
+              </span>
+              {state.carouselId && (
+                <Link
+                  href={`/library/${state.carouselId}`}
+                  className="press inline-flex items-center gap-1 font-semibold text-state-success underline-offset-2 hover:underline"
+                >
+                  Open in detail <ArrowRight className="h-3.5 w-3.5" />
+                </Link>
+              )}
+            </div>
+          )}
           {footerSlot}
           <button
             type="button"
