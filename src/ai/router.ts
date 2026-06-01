@@ -24,6 +24,12 @@ import type {
 } from './providers/types';
 import { pickAvailableKey, recordCall } from './quotaTracker';
 import { cacheKey, lookup as cacheLookup, store as cacheStore } from './cache';
+import {
+  healthOf,
+  isAvailable,
+  recordFailure,
+  recordSuccess,
+} from './circuitBreaker';
 
 const log = childLogger({ module: 'ai-router' });
 
@@ -140,9 +146,14 @@ async function routeTextCall(
     );
   }
 
-  // 3. Walk providers with failover.
+  // 3. Walk providers with failover + circuit breaker.
   const errors: string[] = [];
   for (const provider of providers) {
+    // Skip a provider whose breaker is open (cooling down after failures).
+    if (!isAvailable(provider.id)) {
+      errors.push(`${provider.id}: cooling down (circuit open)`);
+      continue;
+    }
     const keyIndex = await pickAvailableKey(provider);
     if (keyIndex === null) {
       errors.push(`${provider.id}: all keys at daily quota`);
@@ -150,6 +161,7 @@ async function routeTextCall(
     }
     try {
       const result = await provider.complete(args, tier, keyIndex);
+      recordSuccess(provider.id);
       // Fire-and-forget quota record + cache store.
       void recordCall(provider, keyIndex, result.approxTokens);
       if (cacheKeyStr) void cacheStore(cacheKeyStr, provider.id, result.model, result.text);
@@ -162,9 +174,11 @@ async function routeTextCall(
       const msg = (err as Error).message || String(err);
       errors.push(`${provider.id}: ${msg}`);
       log.warn({ provider: provider.id, err: msg }, 'provider failed, trying next');
-      // Retryable provider errors fall through; non-retryable validation
-      // errors short-circuit since they'll fail on every provider.
+      // Non-retryable validation errors short-circuit and do NOT count against
+      // provider health (the prompt is bad, not the provider). Retryable
+      // failures trip the breaker.
       if (err instanceof ValidationError) throw err;
+      recordFailure(provider.id, msg);
     }
   }
 
@@ -245,6 +259,7 @@ export function providerStatus(): Array<{
   isPaid: boolean;
   costPer1MTokens: number;
   costTier: 'free' | 'low' | 'standard';
+  health: ReturnType<typeof healthOf>;
 }> {
   return [...new Set(activeProviders().map((p) => p.id))]
     .map((id) => getProvider(id)!)
@@ -257,5 +272,6 @@ export function providerStatus(): Array<{
       isPaid: p.isPaid,
       costPer1MTokens: p.costPer1MTokens,
       costTier: p.costPer1MTokens === 0 ? 'free' : p.costPer1MTokens < 50 ? 'low' : 'standard',
+      health: healthOf(p.id),
     }));
 }

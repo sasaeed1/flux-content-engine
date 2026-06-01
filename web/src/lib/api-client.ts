@@ -251,6 +251,14 @@ export const api = {
           isPaid: boolean;
           costPer1MTokens: number;
           costTier: 'free' | 'low' | 'standard';
+          health: {
+            state: 'healthy' | 'degraded' | 'cooling';
+            consecutiveFailures: number;
+            cooldownRemainingMs: number;
+            totalSuccesses: number;
+            totalFailures: number;
+            lastError: string | null;
+          };
         }>;
         todayUsage: Array<{
           provider: string;
