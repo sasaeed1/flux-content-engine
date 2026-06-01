@@ -325,13 +325,16 @@ router.post(
     const system = [
       'You are the command interpreter for Flux. Map the user\'s natural-language input to ONE action.',
       'Allowed actions:',
-      ' - navigate { path: string }                    — open a route (/dashboard, /library, /brand, /themes, /settings, /help)',
+      ' - navigate { path: string }                    — open a route (/home, /forge, /library, /brand, /signals, /settings)',
       ' - generate_topics { count: number, theme?: string } — fill the topic queue',
       ' - run_pipeline { topicId?: string }            — produce a new carousel',
       ' - rewrite_caption { carouselId: string, style: string } — rewrite a caption',
       ' - switch_theme { themeKey: string }            — switch brand theme',
-      ' - show_insights                                — open the AI insights panel',
+      ' - show_insights                                — open the opportunity feed on Home',
       ' - unknown                                      — if the input is unclear',
+      '',
+      'Route map: Home/dashboard→/home, Forge/create/generate→/forge, Library/carousels→/library,',
+      'Brand/voice/themes/looks→/brand, Signals/analytics/performance→/signals, Settings→/settings.',
       '',
       'Return: { "action": "...", "args": { ... }, "reply": "short human-readable confirmation" }',
       'If the user said something ambiguous, action=unknown and reply explains why.',
@@ -359,6 +362,36 @@ router.post(
     });
 
     res.json(result);
+  }),
+);
+
+/* ============================================================
+ *  /command/history — Sprint C: recent Cmd-K commands for recall.
+ *  Returns the org's recent natural-language commands so the palette can
+ *  surface a "recent" list the user can one-click re-run.
+ * ============================================================ */
+
+router.get(
+  '/tenant/intelligence/command/history',
+  asyncHandler(async (req, res) => {
+    const orgId = req.tenant!.organizationId;
+    const limit = Math.min(20, Math.max(1, Number(req.query.limit) || 8));
+    const { data, error } = await supabase
+      .from('command_history')
+      .select('id, raw_input, parsed_action, created_at')
+      .eq('organization_id', orgId)
+      .order('created_at', { ascending: false })
+      .limit(limit);
+    if (error) throw new AppError(error.message, { status: 500, code: 'CMD_HISTORY' });
+    // De-dup consecutive identical inputs so recall isn't cluttered.
+    const seen = new Set<string>();
+    const history = (data ?? []).filter((r) => {
+      const k = (r.raw_input ?? '').trim().toLowerCase();
+      if (!k || seen.has(k)) return false;
+      seen.add(k);
+      return true;
+    });
+    res.json({ history });
   }),
 );
 

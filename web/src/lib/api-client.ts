@@ -368,6 +368,15 @@ export const api = {
         method: 'POST',
         json: { input },
       }),
+    commandHistory: () =>
+      engineFetch<{
+        history: Array<{
+          id: string;
+          raw_input: string;
+          parsed_action: string | null;
+          created_at: string;
+        }>;
+      }>('/api/tenant/intelligence/command/history?limit=8'),
     getMode: () =>
       engineFetch<{ mode: string; metadata: Record<string, unknown> }>(
         '/api/tenant/intelligence/workspace-mode',

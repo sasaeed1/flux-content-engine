@@ -32,10 +32,17 @@ import {
   Zap,
 } from 'lucide-react';
 import {
+  commandHistoryAction,
   generateTopicsViaCmdAction,
   runCommandAction,
   runPipelineViaCmdAction,
 } from '@/app/(app)/command-actions';
+
+interface CmdHistory {
+  id: string;
+  raw_input: string;
+  parsed_action: string | null;
+}
 
 interface QuickAction {
   id: string;
@@ -52,12 +59,20 @@ interface QuickAction {
 
 const QUICK_ACTIONS: QuickAction[] = [
   {
-    id: 'open-dashboard',
-    label: 'Open dashboard',
-    hint: 'Workspace overview',
+    id: 'open-forge',
+    label: 'Open the Forge',
+    hint: 'Create a carousel',
+    icon: Wand2,
+    keywords: ['forge', 'create', 'generate', 'new', 'studio'],
+    run: (r) => r.push('/forge'),
+  },
+  {
+    id: 'open-home',
+    label: 'Open home',
+    hint: 'Mission control',
     icon: LayoutDashboard,
-    keywords: ['home', 'dashboard', 'overview'],
-    run: (r) => r.push('/dashboard'),
+    keywords: ['home', 'dashboard', 'overview', 'opportunities'],
+    run: (r) => r.push('/home'),
   },
   {
     id: 'open-library',
@@ -69,19 +84,27 @@ const QUICK_ACTIONS: QuickAction[] = [
   },
   {
     id: 'open-brand',
-    label: 'Open brand editor',
-    hint: 'Voice + theme',
+    label: 'Open Brand Studio',
+    hint: 'Voice + Looks',
     icon: Sparkles,
-    keywords: ['brand', 'voice', 'tone', 'colors'],
+    keywords: ['brand', 'voice', 'tone', 'colors', 'themes', 'styles', 'looks'],
     run: (r) => r.push('/brand'),
   },
   {
-    id: 'open-themes',
-    label: 'Open themes gallery',
-    hint: '40 style modes',
+    id: 'open-styles',
+    label: 'Browse 40 style modes',
+    hint: 'Static + motion previews',
     icon: Palette,
-    keywords: ['themes', 'styles', 'visual'],
-    run: (r) => r.push('/themes'),
+    keywords: ['themes', 'styles', 'visual', 'looks', 'motion'],
+    run: (r) => r.push('/brand?tab=looks'),
+  },
+  {
+    id: 'open-signals',
+    label: 'Open Signals',
+    hint: 'Performance intelligence',
+    icon: Calendar,
+    keywords: ['signals', 'analytics', 'performance', 'stats'],
+    run: (r) => r.push('/signals'),
   },
   {
     id: 'open-settings',
@@ -146,10 +169,46 @@ export function CommandPalette() {
   const [query, setQuery] = useState('');
   const [activeIdx, setActiveIdx] = useState(0);
   const [reply, setReply] = useState<string | null>(null);
+  const [displayedReply, setDisplayedReply] = useState('');
   const [aiMode, setAiMode] = useState(false);
   const [pending, start] = useTransition();
   const [localPending, setLocalPending] = useState(false);
+  const [history, setHistory] = useState<CmdHistory[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  // Sprint C — fetch recent commands once per open for the recall list.
+  useEffect(() => {
+    if (!open) return;
+    let alive = true;
+    void commandHistoryAction()
+      .then((res) => {
+        if (alive) setHistory(res.history as CmdHistory[]);
+      })
+      .catch(() => {
+        /* ignore */
+      });
+    return () => {
+      alive = false;
+    };
+  }, [open]);
+
+  // Sprint C — typewriter reveal of the AI reply (perceived streaming: the
+  // engine returns the full reply, we type it out so it feels like the engine
+  // is "speaking" rather than popping a spinner result).
+  useEffect(() => {
+    if (!reply) {
+      setDisplayedReply('');
+      return;
+    }
+    setDisplayedReply('');
+    let i = 0;
+    const id = setInterval(() => {
+      i += 2;
+      setDisplayedReply(reply.slice(0, i));
+      if (i >= reply.length) clearInterval(id);
+    }, 14);
+    return () => clearInterval(id);
+  }, [reply]);
 
   // Global hotkey: Cmd/Ctrl + K.
   useEffect(() => {
@@ -238,7 +297,7 @@ export function CommandPalette() {
             }
             break;
           case 'show_insights':
-            router.push('/dashboard#insights');
+            router.push('/home');
             setOpen(false);
             break;
           default:
@@ -450,6 +509,29 @@ export function CommandPalette() {
                   <em>&quot;Open library&quot;</em>, <em>&quot;Run pipeline&quot;</em>, <em>&quot;Switch to luxury black theme&quot;</em>.
                 </span>
               </div>
+              {/* thinking state — perceived streaming */}
+              {(localPending || pending) && !reply && (
+                <div
+                  className="shimmer-sweep"
+                  style={{
+                    marginTop: 12,
+                    padding: '12px 14px',
+                    borderRadius: 10,
+                    background: 'rgba(167,139,250,0.08)',
+                    border: '1px solid rgba(167,139,250,0.28)',
+                    color: '#ddd6fe',
+                    fontSize: 13,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 8,
+                  }}
+                >
+                  <Sparkles size={13} className="animate-pulse" />
+                  Flux is thinking…
+                </div>
+              )}
+
+              {/* typewriter reply */}
               {reply && (
                 <div
                   style={{
@@ -463,10 +545,69 @@ export function CommandPalette() {
                     lineHeight: 1.5,
                   }}
                 >
-                  {reply}
+                  {displayedReply}
+                  {displayedReply.length < reply.length && (
+                    <span style={{ opacity: 0.7 }} className="animate-pulse">▋</span>
+                  )}
                 </div>
               )}
-              {!reply && (
+
+              {/* recent commands (recall) */}
+              {!reply && !(localPending || pending) && !query.trim() && history.length > 0 && (
+                <div style={{ marginTop: 12 }}>
+                  <div
+                    style={{
+                      fontSize: 10,
+                      fontWeight: 700,
+                      letterSpacing: '0.14em',
+                      textTransform: 'uppercase',
+                      color: 'rgba(255,255,255,0.4)',
+                      marginBottom: 6,
+                      paddingLeft: 2,
+                    }}
+                  >
+                    Recent
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                    {history.slice(0, 5).map((h) => (
+                      <button
+                        key={h.id}
+                        type="button"
+                        onClick={() => {
+                          setQuery(h.raw_input);
+                          setTimeout(askAi, 0);
+                        }}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 8,
+                          padding: '8px 10px',
+                          borderRadius: 8,
+                          border: '1px solid rgba(255,255,255,0.06)',
+                          background: 'rgba(255,255,255,0.02)',
+                          color: 'rgba(255,255,255,0.78)',
+                          fontSize: 12.5,
+                          cursor: 'pointer',
+                          textAlign: 'left',
+                        }}
+                      >
+                        <Search size={12} style={{ color: '#a78bfa', flexShrink: 0 }} />
+                        <span
+                          style={{
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
+                          }}
+                        >
+                          {h.raw_input}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {!reply && !(localPending || pending) && (
                 <button
                   type="button"
                   onClick={askAi}
@@ -487,15 +628,11 @@ export function CommandPalette() {
                     fontWeight: 800,
                     fontSize: 13.5,
                     cursor: 'pointer',
-                    opacity: !query.trim() || localPending || pending ? 0.5 : 1,
+                    opacity: !query.trim() ? 0.5 : 1,
                     boxShadow: '0 10px 28px -8px rgba(34,211,238,0.5)',
                   }}
                 >
-                  {localPending || pending ? (
-                    <Loader2 size={14} className="animate-spin" />
-                  ) : (
-                    <Send size={13} />
-                  )}
+                  <Send size={13} />
                   Ask Flux
                 </button>
               )}

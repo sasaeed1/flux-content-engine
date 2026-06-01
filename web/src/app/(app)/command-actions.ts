@@ -12,16 +12,25 @@ export async function runCommandAction(input: string) {
   return await api.intelligence.command(input);
 }
 
+/** Sprint C — recent Cmd-K commands for the recall list. */
+export async function commandHistoryAction() {
+  try {
+    return await api.intelligence.commandHistory();
+  } catch {
+    return { history: [] };
+  }
+}
+
 export async function generateTopicsViaCmdAction(count: number, theme?: string) {
   const res = await api.generateTopics(count, theme);
-  revalidatePath('/dashboard');
+  revalidatePath('/home');
   revalidatePath('/library');
   return res;
 }
 
 export async function runPipelineViaCmdAction() {
   const res = await api.runPipeline({ approvalMode: 'manual' });
-  revalidatePath('/dashboard');
+  revalidatePath('/home');
   revalidatePath('/library');
   return res;
 }
