@@ -54,4 +54,17 @@ export interface LLMProvider {
   complete(args: LLMCallArgs, tier: ModelTier, keyIndex: number): Promise<LLMCallResult>;
   /** Daily quota cap per key — used by quotaTracker. */
   dailyQuotaPerKey(): number;
+  /**
+   * Sprint A — cost classification.
+   * `isPaid: true` providers are skipped by the router unless ALLOW_PAID_FALLBACK
+   * is on AND the entire free pool is exhausted, OR the caller explicitly
+   * preferred this provider.
+   */
+  isPaid: boolean;
+  /**
+   * Relative cost weight. 0 = free, higher = pricier. Used for cost-tier
+   * classification and surfacing on the provider status endpoint.
+   * Per-million tokens, in cents (approx). Free providers: 0.
+   */
+  costPer1MTokens: number;
 }

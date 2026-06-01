@@ -12,6 +12,7 @@
  * upgrade of the legacy `completeJson` in src/ai/llm.ts.
  */
 import { z } from 'zod';
+import { env } from '../config/env';
 import { childLogger } from '../lib/logger';
 import { ExternalApiError, ValidationError } from '../lib/errors';
 import { activeProviders, getProvider } from './providers';
@@ -35,10 +36,32 @@ export interface RoutedCallContext {
     apiKey: string;
     model?: string;
   } | null;
-  /** Enable the deterministic response cache. */
+  /**
+   * Force the deterministic response cache ON regardless of temperature.
+   * Leave undefined to use the default policy (cache when temperature is at or
+   * below CACHE_MAX_TEMPERATURE). Set false together with cacheBypass to never
+   * cache.
+   */
   cacheEnabled?: boolean;
+  /** Force the cache OFF for this call (creative variety). Wins over cacheEnabled. */
+  cacheBypass?: boolean;
   /** Tier maps to a model family inside each provider. */
   tier?: ModelTier;
+}
+
+/**
+ * Cache policy (Sprint A): default-ON for deterministic calls.
+ *   - cacheBypass=true            → never cache
+ *   - cacheEnabled=true           → always cache
+ *   - otherwise                   → cache iff temperature ≤ CACHE_MAX_TEMPERATURE
+ * Always gated by the global ENABLE_RESPONSE_CACHE kill switch.
+ */
+function shouldCache(ctx: RoutedCallContext, temperature: number): boolean {
+  if (!env.ENABLE_RESPONSE_CACHE) return false;
+  if (ctx.cacheBypass) return false;
+  if (ctx.cacheEnabled === true) return true;
+  if (ctx.cacheEnabled === false) return false;
+  return temperature <= env.CACHE_MAX_TEMPERATURE;
 }
 
 function stripFences(text: string): string {
@@ -60,8 +83,9 @@ async function routeTextCall(
 
   // 1. Cache lookup if enabled. Cache key is provider-agnostic at this layer —
   //    we'll re-hash inside each provider attempt using their actual model.
+  //    Sprint A: default-on for deterministic (low-temp) calls.
   let cacheKeyStr: string | null = null;
-  if (ctx.cacheEnabled) {
+  if (shouldCache(ctx, args.temperature)) {
     // Use the highest-priority active provider's model for the cache key so
     // multiple providers can share cached entries when they produce
     // structurally-equivalent JSON.
@@ -89,12 +113,25 @@ async function routeTextCall(
   }
 
   // 2. Build the candidate provider list.
+  //    Free-tier first: paid providers (OpenAI) are excluded unless
+  //    ALLOW_PAID_FALLBACK is on (then appended LAST, after the whole free
+  //    pool), or the caller explicitly pins one via preferProvider.
   let providers: LLMProvider[];
   if (ctx.preferProvider) {
     const p = getProvider(ctx.preferProvider);
     providers = p && p.isConfigured() ? [p] : [];
   } else {
-    providers = activeProviders();
+    const active = activeProviders();
+    const free = active.filter((p) => !p.isPaid);
+    const paid = active.filter((p) => p.isPaid);
+    if (free.length === 0) {
+      // Only paid providers are configured — use them rather than fail.
+      providers = paid;
+    } else if (env.ALLOW_PAID_FALLBACK) {
+      providers = [...free, ...paid]; // paid as last resort
+    } else {
+      providers = free;
+    }
   }
   if (providers.length === 0) {
     throw new ExternalApiError(
@@ -205,6 +242,9 @@ export function providerStatus(): Array<{
   configured: boolean;
   keyCount: number;
   dailyQuotaPerKey: number;
+  isPaid: boolean;
+  costPer1MTokens: number;
+  costTier: 'free' | 'low' | 'standard';
 }> {
   return [...new Set(activeProviders().map((p) => p.id))]
     .map((id) => getProvider(id)!)
@@ -214,5 +254,8 @@ export function providerStatus(): Array<{
       configured: p.isConfigured(),
       keyCount: p.keyCount(),
       dailyQuotaPerKey: p.dailyQuotaPerKey(),
+      isPaid: p.isPaid,
+      costPer1MTokens: p.costPer1MTokens,
+      costTier: p.costPer1MTokens === 0 ? 'free' : p.costPer1MTokens < 50 ? 'low' : 'standard',
     }));
 }

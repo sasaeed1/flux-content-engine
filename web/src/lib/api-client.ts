@@ -248,6 +248,9 @@ export const api = {
           configured: boolean;
           keyCount: number;
           dailyQuotaPerKey: number;
+          isPaid: boolean;
+          costPer1MTokens: number;
+          costTier: 'free' | 'low' | 'standard';
         }>;
         todayUsage: Array<{
           provider: string;

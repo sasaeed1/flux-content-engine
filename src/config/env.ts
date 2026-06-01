@@ -66,6 +66,17 @@ const schema = z.object({
   // ----- response cache (Phase 1) -----
   ENABLE_RESPONSE_CACHE: asBool(true),
   CACHE_TTL_SECONDS: asNum(60 * 60 * 24 * 14), // 14d default
+  // Sprint A: cache is default-ON for deterministic calls. Any call at or
+  // below this temperature is cached automatically (scoring, classification,
+  // command parsing, extraction). Creative high-temp generation is NOT cached
+  // unless a caller opts in, so content variety is preserved.
+  CACHE_MAX_TEMPERATURE: asNum(0.4),
+
+  // ----- paid fallback (Sprint A) -----
+  // When false (default), paid providers (OpenAI) are skipped entirely unless
+  // explicitly named via preferProvider. When true, paid providers are used as
+  // a LAST resort once the entire free pool is exhausted or at quota.
+  ALLOW_PAID_FALLBACK: asBool(false),
   // Soft caps for sliding-window quota tracking (per-key, per-day).
   // Conservative defaults below each provider's published free tier.
   QUOTA_DAILY_GROQ: asNum(14000),

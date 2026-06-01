@@ -14,6 +14,7 @@ import { env } from '../../config/env';
 import { ExternalApiError } from '../../lib/errors';
 import { withRetry } from '../../lib/retry';
 import { callOpenAICompatible } from './openaiCompatible';
+import { estimateTokens } from './tokenEstimator';
 import type { LLMCallArgs, LLMCallResult, LLMProvider, ModelTier } from './types';
 
 function splitKeys(s: string): string[] {
@@ -36,6 +37,8 @@ const groqKeys = (() => {
 const groqProvider: LLMProvider = {
   id: 'groq',
   priority: 100,
+  isPaid: false,
+  costPer1MTokens: 0,
   isConfigured: () => groqKeys.length > 0,
   keyCount: () => groqKeys.length,
   modelFor: () => env.GROQ_MODEL,
@@ -60,6 +63,8 @@ const openrouterKeys = splitKeys(env.OPENROUTER_API_KEYS);
 const openrouterProvider: LLMProvider = {
   id: 'openrouter',
   priority: 80,
+  isPaid: false,
+  costPer1MTokens: 0,
   isConfigured: () => openrouterKeys.length > 0,
   keyCount: () => openrouterKeys.length,
   modelFor(tier) {
@@ -99,7 +104,7 @@ async function callGemini(
   keyIndex: number,
 ): Promise<LLMCallResult> {
   const started = Date.now();
-  const text = await withRetry(
+  const result = await withRetry(
     async () => {
       try {
         const res = await axios.post(
@@ -117,7 +122,16 @@ async function callGemini(
         );
         const content = res.data?.candidates?.[0]?.content?.parts?.[0]?.text;
         if (!content) throw new ExternalApiError('gemini', 'empty completion');
-        return content as string;
+        // Sprint A — capture usage. Gemini reports it under `usageMetadata`.
+        const um = res.data?.usageMetadata as
+          | { promptTokenCount?: number; candidatesTokenCount?: number; totalTokenCount?: number }
+          | undefined;
+        const approxTokens =
+          um?.totalTokenCount ??
+          (um?.promptTokenCount !== undefined || um?.candidatesTokenCount !== undefined
+            ? (um?.promptTokenCount ?? 0) + (um?.candidatesTokenCount ?? 0)
+            : undefined);
+        return { content: content as string, approxTokens };
       } catch (err) {
         const status = (err as { response?: { status?: number } })?.response?.status;
         const message = (err as Error)?.message ?? String(err);
@@ -130,12 +144,21 @@ async function callGemini(
     },
     { label: `gemini:${model}` },
   );
-  return { text, provider: 'gemini', model, keyIndex, latencyMs: Date.now() - started };
+  return {
+    text: result.content,
+    provider: 'gemini',
+    model,
+    keyIndex,
+    latencyMs: Date.now() - started,
+    approxTokens: result.approxTokens ?? estimateTokens([args.system, args.user, result.content]),
+  };
 }
 
 const geminiProvider: LLMProvider = {
   id: 'gemini',
   priority: 90,
+  isPaid: false,
+  costPer1MTokens: 0,
   isConfigured: () => geminiKeys.length > 0,
   keyCount: () => geminiKeys.length,
   modelFor(tier) {
@@ -165,7 +188,7 @@ async function callHuggingFace(
   keyIndex: number,
 ): Promise<LLMCallResult> {
   const started = Date.now();
-  const text = await withRetry(
+  const result = await withRetry(
     async () => {
       try {
         const res = await axios.post(
@@ -189,7 +212,15 @@ async function callHuggingFace(
         );
         const content = res.data?.choices?.[0]?.message?.content;
         if (!content) throw new ExternalApiError('huggingface', 'empty completion');
-        return content as string;
+        const usage = res.data?.usage as
+          | { prompt_tokens?: number; completion_tokens?: number; total_tokens?: number }
+          | undefined;
+        const approxTokens =
+          usage?.total_tokens ??
+          (usage?.prompt_tokens !== undefined || usage?.completion_tokens !== undefined
+            ? (usage?.prompt_tokens ?? 0) + (usage?.completion_tokens ?? 0)
+            : undefined);
+        return { content: content as string, approxTokens };
       } catch (err) {
         const status = (err as { response?: { status?: number } })?.response?.status;
         const message = (err as Error)?.message ?? String(err);
@@ -202,12 +233,21 @@ async function callHuggingFace(
     },
     { label: `hf:${model}` },
   );
-  return { text, provider: 'huggingface', model, keyIndex, latencyMs: Date.now() - started };
+  return {
+    text: result.content,
+    provider: 'huggingface',
+    model,
+    keyIndex,
+    latencyMs: Date.now() - started,
+    approxTokens: result.approxTokens ?? estimateTokens([args.system, args.user, result.content]),
+  };
 }
 
 const huggingfaceProvider: LLMProvider = {
   id: 'huggingface',
   priority: 60,
+  isPaid: false,
+  costPer1MTokens: 0,
   isConfigured: () => hfKeys.length > 0,
   keyCount: () => hfKeys.length,
   modelFor(tier) {
@@ -240,7 +280,7 @@ async function callCloudflare(
   keyIndex: number,
 ): Promise<LLMCallResult> {
   const started = Date.now();
-  const text = await withRetry(
+  const result = await withRetry(
     async () => {
       try {
         const res = await axios.post(
@@ -263,7 +303,17 @@ async function callCloudflare(
         );
         const content = res.data?.result?.response;
         if (!content) throw new ExternalApiError('cloudflare', 'empty completion');
-        return content as string;
+        // Cloudflare sometimes returns `result.usage` with tokens. Capture
+        // if present; otherwise fall back to chars/4 below.
+        const usage = res.data?.result?.usage as
+          | { prompt_tokens?: number; completion_tokens?: number; total_tokens?: number }
+          | undefined;
+        const approxTokens =
+          usage?.total_tokens ??
+          (usage?.prompt_tokens !== undefined || usage?.completion_tokens !== undefined
+            ? (usage?.prompt_tokens ?? 0) + (usage?.completion_tokens ?? 0)
+            : undefined);
+        return { content: content as string, approxTokens };
       } catch (err) {
         const status = (err as { response?: { status?: number } })?.response?.status;
         const message = (err as Error)?.message ?? String(err);
@@ -276,12 +326,21 @@ async function callCloudflare(
     },
     { label: `cf:${model}` },
   );
-  return { text, provider: 'cloudflare', model, keyIndex, latencyMs: Date.now() - started };
+  return {
+    text: result.content,
+    provider: 'cloudflare',
+    model,
+    keyIndex,
+    latencyMs: Date.now() - started,
+    approxTokens: result.approxTokens ?? estimateTokens([args.system, args.user, result.content]),
+  };
 }
 
 const cloudflareProvider: LLMProvider = {
   id: 'cloudflare',
   priority: 95, // very high — biggest free tier
+  isPaid: false,
+  costPer1MTokens: 0,
   isConfigured: () => cfKeys.length > 0 && !!cfAccount,
   keyCount: () => cfKeys.length,
   modelFor(tier) {
@@ -309,6 +368,8 @@ const togetherKeys = splitKeys(env.TOGETHER_API_KEYS);
 const togetherProvider: LLMProvider = {
   id: 'together',
   priority: 50,
+  isPaid: false, // Free credit tier; flips to paid only after credits drain
+  costPer1MTokens: 0,
   isConfigured: () => togetherKeys.length > 0,
   keyCount: () => togetherKeys.length,
   modelFor(tier) {
@@ -336,6 +397,10 @@ const openaiKey = env.OPENAI_API_KEY;
 const openaiProvider: LLMProvider = {
   id: 'openai',
   priority: 30, // low — only when explicitly requested
+  isPaid: true,
+  // gpt-4o-mini ≈ $0.15 input, $0.60 output per 1M tokens. Approximate
+  // blended cost — used for cost-tier ranking, not billing.
+  costPer1MTokens: 30,
   isConfigured: () => !!openaiKey,
   keyCount: () => (openaiKey ? 1 : 0),
   modelFor: () => env.OPENAI_MODEL,
@@ -399,6 +464,8 @@ async function callOllama(
 const ollamaProvider: LLMProvider = {
   id: 'ollama',
   priority: 10, // last resort
+  isPaid: false, // local, free
+  costPer1MTokens: 0,
   isConfigured: () => !!env.OLLAMA_BASE_URL,
   keyCount: () => 1,
   modelFor: () => env.OLLAMA_MODEL,

@@ -51,7 +51,7 @@ export async function callOpenAICompatible(
   const system = args.jsonMode
     ? `${args.system}\n\nRespond as a SINGLE valid JSON object. No prose, no markdown.`
     : args.system;
-  const text = await withRetry(
+  const result = await withRetry(
     async () => {
       try {
         const res = await client.chat.completions.create({
@@ -66,7 +66,16 @@ export async function callOpenAICompatible(
         });
         const content = res.choices[0]?.message?.content;
         if (!content) throw new ExternalApiError(opts.provider, 'empty completion');
-        return content;
+        // Sprint A — capture usage when the provider returns it. Falls back
+        // to a character-based estimate further down if usage is missing.
+        const usage = (res as { usage?: { prompt_tokens?: number; completion_tokens?: number; total_tokens?: number } }).usage;
+        const approxTokens =
+          typeof usage?.total_tokens === 'number'
+            ? usage.total_tokens
+            : typeof usage?.prompt_tokens === 'number' || typeof usage?.completion_tokens === 'number'
+              ? (usage?.prompt_tokens ?? 0) + (usage?.completion_tokens ?? 0)
+              : undefined;
+        return { content, approxTokens };
       } catch (err) {
         const status = (err as { status?: number })?.status;
         const message = (err as Error)?.message ?? String(err);
@@ -80,11 +89,17 @@ export async function callOpenAICompatible(
     { label: `${opts.provider}:${model}` },
   );
 
+  // Sprint A — fall back to a chars/4 estimate when the provider omits usage.
+  const approxTokens =
+    result.approxTokens ??
+    Math.ceil((system.length + args.user.length + result.content.length) / 4);
+
   return {
-    text,
+    text: result.content,
     provider: opts.provider,
     model,
     keyIndex,
     latencyMs: Date.now() - started,
+    approxTokens,
   };
 }
