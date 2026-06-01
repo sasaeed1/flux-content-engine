@@ -16,6 +16,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
   Activity,
+  CalendarRange,
   ChevronsLeft,
   Fingerprint,
   LayoutGrid,
@@ -41,7 +42,10 @@ const GROUPS: Group[] = [
   },
   {
     intent: 'Create',
-    items: [{ href: '/forge', label: 'Forge', icon: Wand2, cta: true }],
+    items: [
+      { href: '/forge', label: 'Forge', icon: Wand2, cta: true },
+      { href: '/campaign', label: 'Campaign', icon: CalendarRange },
+    ],
   },
   {
     intent: 'Manage',

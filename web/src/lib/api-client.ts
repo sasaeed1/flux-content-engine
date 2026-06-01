@@ -108,6 +108,32 @@ export const api = {
     }),
 
   nextTopic: () => engineFetch<{ topic: unknown }>('/api/tenant/topics/next'),
+  // Sprint G — Campaign calendar
+  listTopics: (from?: string, to?: string) => {
+    const qs = new URLSearchParams();
+    if (from) qs.set('from', from);
+    if (to) qs.set('to', to);
+    const q = qs.toString();
+    return engineFetch<{
+      topics: Array<{
+        id: string;
+        topic: string;
+        angle: string | null;
+        post_type: string;
+        scheduled_date: string | null;
+        priority: number;
+        status: string;
+        created_at: string;
+      }>;
+    }>(`/api/tenant/topics${q ? `?${q}` : ''}`);
+  },
+  updateTopic: (id: string, patch: { scheduledDate?: string; status?: string; priority?: number }) =>
+    engineFetch<{ ok: true; topic: unknown }>(`/api/tenant/topics/${id}`, {
+      method: 'PATCH',
+      json: patch,
+    }),
+  deleteTopic: (id: string) =>
+    engineFetch<{ ok: true }>(`/api/tenant/topics/${id}`, { method: 'DELETE' }),
   addTopics: (topics: unknown[]) =>
     engineFetch<{ inserted: number; topics: unknown[] }>('/api/tenant/topics', {
       method: 'POST',
@@ -127,6 +153,13 @@ export const api = {
     approvalMode?: 'auto' | 'manual';
     styleModeKey?: string;
   }) => engineFetch<unknown>('/api/tenant/pipeline/run', { method: 'POST', json: body }),
+
+  // Sprint H — "forge the month": background batch over pending topics.
+  batchPipeline: (body: { count?: number; draftOnly?: boolean; styleModeKey?: string }) =>
+    engineFetch<{ ok: true; queued: number; draftOnly?: boolean; message?: string }>(
+      '/api/tenant/pipeline/batch',
+      { method: 'POST', json: body },
+    ),
 
   recentRuns: (limit = 8) =>
     engineFetch<{ runs: PipelineRun[] }>(`/api/tenant/pipeline/runs?limit=${limit}`),

@@ -159,6 +159,69 @@ router.get(
   }),
 );
 
+// Sprint G — list topics for the Campaign calendar. Optional from/to (YYYY-MM-DD)
+// to scope to a visible month.
+router.get(
+  '/tenant/topics',
+  asyncHandler(async (req, res) => {
+    const orgId = req.tenant!.organizationId;
+    const from = typeof req.query.from === 'string' ? req.query.from : undefined;
+    const to = typeof req.query.to === 'string' ? req.query.to : undefined;
+    let q = supabase
+      .from('content_topics')
+      .select('id, topic, angle, post_type, scheduled_date, priority, status, created_at')
+      .eq('organization_id', orgId)
+      .order('scheduled_date', { ascending: true })
+      .limit(400);
+    if (from) q = q.gte('scheduled_date', from);
+    if (to) q = q.lte('scheduled_date', to);
+    const { data, error } = await q;
+    if (error) throw new ValidationError(error.message);
+    res.json({ topics: data ?? [] });
+  }),
+);
+
+// Sprint G — reschedule / update a topic (drag-to-reschedule on the calendar).
+router.patch(
+  '/tenant/topics/:id',
+  asyncHandler(async (req, res) => {
+    const orgId = req.tenant!.organizationId;
+    const body = (req.body ?? {}) as { scheduledDate?: string; status?: string; priority?: number };
+    const patch: Record<string, unknown> = {};
+    if (typeof body.scheduledDate === 'string') patch.scheduled_date = body.scheduledDate;
+    if (typeof body.status === 'string') patch.status = body.status;
+    if (typeof body.priority === 'number') patch.priority = body.priority;
+    if (Object.keys(patch).length === 0) {
+      throw new ValidationError('Provide scheduledDate, status, or priority');
+    }
+    const { data, error } = await supabase
+      .from('content_topics')
+      .update(patch)
+      .eq('organization_id', orgId)
+      .eq('id', req.params.id)
+      .select('id, topic, scheduled_date, status')
+      .maybeSingle();
+    if (error) throw new ValidationError(error.message);
+    if (!data) throw new ValidationError('Topic not found');
+    res.json({ ok: true, topic: data });
+  }),
+);
+
+// Sprint G — delete a topic from the calendar.
+router.delete(
+  '/tenant/topics/:id',
+  asyncHandler(async (req, res) => {
+    const orgId = req.tenant!.organizationId;
+    const { error } = await supabase
+      .from('content_topics')
+      .delete()
+      .eq('organization_id', orgId)
+      .eq('id', req.params.id);
+    if (error) throw new ValidationError(error.message);
+    res.json({ ok: true });
+  }),
+);
+
 router.post(
   '/tenant/topics',
   asyncHandler(async (req, res) => {

@@ -55,6 +55,66 @@ router.post(
 );
 
 /**
+ * POST /tenant/pipeline/batch — Sprint H "forge the month" one-click.
+ *
+ * Picks up to `count` (cap 12) pending topics and produces a carousel for each,
+ * in the BACKGROUND (responds immediately so the request never times out).
+ * draftOnly defaults to true so a month of scripts materializes fast for the
+ * user to review/edit; pass draftOnly:false to render fully. Budget-capped and
+ * sequential (concurrency 1) to stay within free-tier quotas.
+ */
+router.post(
+  '/tenant/pipeline/batch',
+  asyncHandler(async (req, res) => {
+    const orgId = req.tenant!.organizationId;
+    const body = (req.body ?? {}) as Record<string, unknown>;
+    const count = Math.min(12, Math.max(1, Number(body.count) || 8));
+    const draftOnly = body.draftOnly !== false; // default true
+    const styleModeKey =
+      typeof body.styleModeKey === 'string' && body.styleModeKey.length > 0
+        ? body.styleModeKey
+        : undefined;
+
+    // Find pending topics to consume.
+    const { data: pending, error } = await supabase
+      .from('content_topics')
+      .select('id')
+      .eq('organization_id', orgId)
+      .eq('status', 'pending')
+      .order('scheduled_date', { ascending: true })
+      .order('priority', { ascending: false })
+      .limit(count);
+    if (error) throw new ValidationError(error.message);
+
+    const topicIds = (pending ?? []).map((r) => r.id as string);
+    if (topicIds.length === 0) {
+      res.json({ ok: true, queued: 0, message: 'No pending topics — generate some first.' });
+      return;
+    }
+
+    // Respond immediately; process sequentially in the background.
+    res.json({ ok: true, queued: topicIds.length, draftOnly });
+
+    void (async () => {
+      for (const topicId of topicIds) {
+        try {
+          await runPipeline({
+            organizationId: orgId,
+            topicId,
+            styleModeKey,
+            approvalMode: 'manual',
+            draftOnly,
+            suppressFailureLog: false,
+          });
+        } catch {
+          /* per-topic failure already logged by the pipeline; keep going */
+        }
+      }
+    })();
+  }),
+);
+
+/**
  * POST /tenant/pipeline/run-stream — Server-Sent Events.
  *
  * Holds the response open and writes one `event:` chunk per pipeline event
