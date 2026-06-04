@@ -189,6 +189,8 @@ export interface PipelineOptions {
   brandProfileId?: string;
   templateKey?: string;
   postType?: PostType;
+  /** Carousel slide count (3-10) — overrides the template's default. */
+  slideCount?: number;
   publishAt?: string;
   approvalMode?: 'auto' | 'manual';
   /** Optional style mode key from `style_modes.key` — Studio passes this through. */

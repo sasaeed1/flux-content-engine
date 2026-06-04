@@ -172,6 +172,8 @@ export function buildCarouselContentPrompt(input: {
   topic: string;
   angle?: string | null;
   template: TemplateDefinition;
+  /** Optional override of the template's slide sequence (slide-count control). */
+  slides?: SlideDefinition[];
   /** Optional anti-repetition + archetype guidance (from historyService). */
   diversityBlock?: string;
 }): Prompt {
@@ -186,8 +188,9 @@ export function buildCarouselContentPrompt(input: {
     input.diversityBlock ? `\n${input.diversityBlock}` : '',
   ].join('\n');
 
-  const slotSpec = describeSlideSlots(input.template.slides);
-  const slideCount = input.template.slides.length;
+  const effectiveSlides = input.slides ?? input.template.slides;
+  const slotSpec = describeSlideSlots(effectiveSlides);
+  const slideCount = effectiveSlides.length;
 
   const user = [
     `TOPIC: ${input.topic}`,
@@ -220,6 +223,13 @@ export function buildCarouselContentPrompt(input: {
     '          we work with"), or omit. NEVER invent a person\'s name.',
     '- cta: 3-7 word imperative tuned to the brand\'s ctaStyle. Pick ONE concrete action.',
     '- handle: the brand\'s @handle if known, else "@<brand-slug>". Never "@yourbrand" literal.',
+    '- leftTitle / rightTitle: 1-3 word comparison column headers',
+    '          (e.g. "Old way"/"New way", "Myth"/"Truth", "Before"/"After").',
+    '- leftItems / rightItems: 2-4 short parallel items each (2-6 words) — one side per column.',
+    '- kicker: a 1-3 word section label, uppercase-feel ("THE SHIFT", "REALITY CHECK").',
+    '- tagline: one short punchy line (≤10 words).',
+    'For comparison/timeline/infographic slides, FILL EVERY listed slot with real,',
+    'specific content — never leave a column or item list empty.',
     '',
     'Return ONLY a JSON object:',
     '{',

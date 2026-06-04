@@ -338,6 +338,42 @@ function baseCss(args: RenderSlideArgs): string {
     }
     .stack-md > * + * { margin-top: 36px; }
     .stack-lg > * + * { margin-top: 56px; }
+
+    /* timeline */
+    .timeline { list-style:none; padding:0; margin:40px 0 0 0; align-self:stretch; }
+    .timeline li { position:relative; padding:0 0 44px 60px; }
+    .timeline li:last-child { padding-bottom:0; }
+    .timeline li::before { content:''; position:absolute; left:13px; top:36px; bottom:0; width:3px; background:var(--accent-soft); }
+    .timeline li:last-child::before { display:none; }
+    .tl-node { position:absolute; left:0; top:6px; width:28px; height:28px; border-radius:999px; background:var(--accent); box-shadow:0 0 0 8px var(--accent-soft); }
+    .tl-head { font-family:var(--font-display); font-weight:800; font-size:48px; line-height:1.08; }
+    .tl-text { font-family:var(--font-primary); font-weight:500; font-size:34px; color:var(--muted); margin-top:10px; }
+
+    /* comparison */
+    .compare { display:flex; align-items:stretch; gap:28px; align-self:stretch; margin-top:44px; }
+    .compare-col { flex:1; padding:40px 34px; border-radius:30px; border:2px solid var(--accent-soft); text-align:left; }
+    .compare-col.accentcol { border-color:var(--accent); background:var(--accent-soft); }
+    .compare-head { font-family:var(--font-display); font-weight:800; font-size:42px; text-transform:uppercase; letter-spacing:0.04em; margin-bottom:26px; }
+    .compare-list { list-style:none; padding:0; margin:0; display:flex; flex-direction:column; gap:20px; }
+    .compare-list li { font-family:var(--font-primary); font-weight:600; font-size:34px; line-height:1.22; }
+    .compare-vs { align-self:center; font-family:var(--font-display); font-weight:900; font-size:46px; color:var(--accent); }
+
+    /* infographic */
+    .info-grid { display:grid; grid-template-columns:1fr 1fr; gap:28px; margin-top:44px; align-self:stretch; }
+    .info-tile { padding:44px 34px; border-radius:30px; background:var(--accent-soft); display:flex; flex-direction:column; gap:14px; text-align:left; }
+    .info-val { font-family:var(--font-display); font-weight:900; font-size:104px; line-height:0.92; color:var(--accent); letter-spacing:-0.03em; }
+    .info-label { font-family:var(--font-primary); font-weight:600; font-size:32px; color:var(--fg); }
+
+    /* editorial */
+    .ed-kicker { font-family:var(--font-primary); font-weight:800; font-size:30px; letter-spacing:0.22em; text-transform:uppercase; color:var(--accent); margin-bottom:34px; }
+    .ed-title { font-family:var(--font-display); font-weight:900; font-size:108px; line-height:1.02; letter-spacing:-0.02em; }
+    .ed-body { font-family:var(--font-primary); font-weight:500; font-size:42px; line-height:1.34; color:var(--muted); margin-top:38px; max-width:94%; }
+    .ed-rule { margin-top:50px; width:170px; height:10px; border-radius:6px; background:var(--accent); }
+
+    /* poster */
+    .poster-sub { font-family:var(--font-primary); font-weight:800; font-size:38px; letter-spacing:0.24em; text-transform:uppercase; }
+    .poster-title { font-family:var(--font-display); font-weight:900; font-size:150px; line-height:0.95; letter-spacing:-0.03em; text-transform:uppercase; }
+    .poster-tag { font-family:var(--font-primary); font-weight:500; font-size:42px; color:var(--muted); margin-top:10px; }
   `;
 }
 
@@ -476,6 +512,100 @@ function bodyDefault(d: SlideContent['data']): string {
   `;
 }
 
+function splitHeadTail(raw: string): { head: string; tail: string } {
+  const parts = String(raw).split(/\s*[—:|]\s*|\s+-\s+/);
+  const head = parts.shift() ?? '';
+  return { head, tail: parts.join(' — ') };
+}
+
+function bodyTimeline(d: SlideContent['data']): string {
+  const title = s(d, 'title');
+  const list = items(d, 'items');
+  return `
+    <div style="display:flex; flex-direction:column; align-items:flex-start; align-self:stretch;">
+      ${title ? `<div class="title">${esc(title)}</div>` : ''}
+      <ul class="timeline">
+        ${list
+          .map((it) => {
+            const { head, tail } = splitHeadTail(it);
+            return `<li><span class="tl-node"></span><div class="tl-head">${esc(head)}</div>${tail ? `<div class="tl-text">${esc(tail)}</div>` : ''}</li>`;
+          })
+          .join('')}
+      </ul>
+    </div>
+  `;
+}
+
+function bodyComparison(d: SlideContent['data']): string {
+  const title = s(d, 'title');
+  const leftTitle = s(d, 'leftTitle', 'Before');
+  const rightTitle = s(d, 'rightTitle', 'After');
+  const left = items(d, 'leftItems');
+  const right = items(d, 'rightItems');
+  return `
+    <div class="stack-md" style="align-self:stretch;">
+      ${title ? `<div class="title">${esc(title)}</div>` : ''}
+      <div class="compare">
+        <div class="compare-col">
+          <div class="compare-head">${esc(leftTitle)}</div>
+          <ul class="compare-list">${left.map((i) => `<li>${esc(i)}</li>`).join('')}</ul>
+        </div>
+        <div class="compare-vs">VS</div>
+        <div class="compare-col accentcol">
+          <div class="compare-head accent">${esc(rightTitle)}</div>
+          <ul class="compare-list">${right.map((i) => `<li>${esc(i)}</li>`).join('')}</ul>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function bodyInfographic(d: SlideContent['data']): string {
+  const title = s(d, 'title');
+  const list = items(d, 'items');
+  return `
+    <div class="stack-md" style="align-self:stretch;">
+      ${title ? `<div class="title">${esc(title)}</div>` : ''}
+      <div class="info-grid">
+        ${list
+          .slice(0, 4)
+          .map((it) => {
+            const { head, tail } = splitHeadTail(it);
+            return `<div class="info-tile"><div class="info-val">${esc(head)}</div><div class="info-label">${esc(tail)}</div></div>`;
+          })
+          .join('')}
+      </div>
+    </div>
+  `;
+}
+
+function bodyEditorial(d: SlideContent['data']): string {
+  const kicker = s(d, 'kicker') || s(d, 'step');
+  const title = s(d, 'title');
+  const body = s(d, 'body');
+  return `
+    <div style="display:flex; flex-direction:column; align-items:flex-start; align-self:stretch;">
+      ${kicker ? `<div class="ed-kicker">${esc(kicker)}</div>` : ''}
+      <div class="ed-title">${esc(title)}</div>
+      ${body ? `<div class="ed-body">${esc(body)}</div>` : ''}
+      <div class="ed-rule"></div>
+    </div>
+  `;
+}
+
+function bodyPoster(d: SlideContent['data']): string {
+  const title = s(d, 'title');
+  const subtitle = s(d, 'subtitle');
+  const tagline = s(d, 'tagline') || s(d, 'body');
+  return `
+    <div class="stack-lg">
+      ${subtitle ? `<div class="poster-sub accent">${esc(subtitle)}</div>` : ''}
+      <div class="poster-title">${esc(title)}</div>
+      ${tagline ? `<div class="poster-tag">${esc(tagline)}</div>` : ''}
+    </div>
+  `;
+}
+
 /* ------------------------------- entry --------------------------------- */
 
 export function renderSlide(args: RenderSlideArgs): string {
@@ -500,6 +630,22 @@ export function renderSlide(args: RenderSlideArgs): string {
     case 'cta-action':
     case 'title-cta':
       body = bodyCta(args.data);
+      break;
+    case 'timeline':
+      body = bodyTimeline(args.data);
+      break;
+    case 'comparison':
+      body = bodyComparison(args.data);
+      break;
+    case 'infographic':
+      body = bodyInfographic(args.data);
+      break;
+    case 'editorial':
+      body = bodyEditorial(args.data);
+      break;
+    case 'poster':
+    case 'cinematic-poster':
+      body = bodyPoster(args.data);
       break;
     default:
       body = bodyDefault(args.data);
@@ -532,7 +678,7 @@ ${fontLinkFor(args)}
 <body>
   ${glowOuter > 0 ? '<div class="glow-layer" aria-hidden="true"></div>' : ''}
   ${overlayOuter ? '<div class="overlay-layer" aria-hidden="true"></div>' : ''}
-  <div class="slide${args.layout === 'two-column-list' ? ' left' : ''}">
+  <div class="slide${['two-column-list', 'timeline', 'editorial'].includes(args.layout) ? ' left' : ''}">
     ${indicator}
     ${body}
   </div>

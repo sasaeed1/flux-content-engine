@@ -153,6 +153,7 @@ export const api = {
     postType?: string;
     approvalMode?: 'auto' | 'manual';
     styleModeKey?: string;
+    slideCount?: number;
   }) => engineFetch<unknown>('/api/tenant/pipeline/run', { method: 'POST', json: body }),
 
   // Sprint H — "forge the month": background batch over pending topics.

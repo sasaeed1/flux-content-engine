@@ -159,6 +159,7 @@ export async function runPipeline(
           template,
           topic: topic!.topic,
           angle: topic!.angle,
+          slideCount: options.slideCount,
         }),
       );
       slides = carouselContent.slides;

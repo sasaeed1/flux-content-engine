@@ -41,6 +41,10 @@ function buildPipelineOptions(orgId: string, body: Record<string, unknown>): Pip
         ? body.styleModeKey
         : undefined,
     draftOnly: body.draftOnly === true,
+    slideCount:
+      Number.isFinite(Number(body.slideCount)) && Number(body.slideCount) > 0
+        ? Math.round(Number(body.slideCount))
+        : undefined,
   };
 }
 
