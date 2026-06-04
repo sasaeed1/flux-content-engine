@@ -12,6 +12,7 @@ import {
   listBrandsForOrg,
   getDefaultBrandForOrg,
   createBrand,
+  getBrandById,
   updateBrand,
   listTemplatesForOrg,
   listThemes,
@@ -121,6 +122,29 @@ async function resolveThemePresetKey(
   return next;
 }
 
+/**
+ * Move a `personality` field out of the body and into the brand's `metadata`
+ * jsonb (merging with existing metadata on update). Personality scales live in
+ * metadata since brand_profiles has no dedicated column.
+ */
+async function withPersonalityMetadata(
+  orgId: string,
+  brandId: string | null,
+  body: Record<string, unknown>,
+): Promise<Record<string, unknown>> {
+  if (!('personality' in body) || !body.personality) return body;
+  const next = { ...body };
+  const personality = next.personality;
+  delete next.personality;
+  let existingMeta: Record<string, unknown> = {};
+  if (brandId) {
+    const existing = await getBrandById(orgId, brandId);
+    existingMeta = (existing?.metadata as Record<string, unknown>) ?? {};
+  }
+  next.metadata = { ...existingMeta, personality };
+  return next;
+}
+
 router.post(
   '/tenant/brand',
   asyncHandler(async (req, res) => {
@@ -129,7 +153,7 @@ router.post(
     if (!body.name || typeof body.name !== 'string') {
       throw new ValidationError('Field "name" is required');
     }
-    const resolved = await resolveThemePresetKey(body);
+    const resolved = await withPersonalityMetadata(orgId, null, await resolveThemePresetKey(body));
     const row = await createBrand({
       ...(resolved as Partial<BrandProfileRow>),
       organization_id: orgId,
@@ -142,7 +166,11 @@ router.patch(
   '/tenant/brand/:id',
   asyncHandler(async (req, res) => {
     const orgId = req.tenant!.organizationId;
-    const resolved = await resolveThemePresetKey((req.body ?? {}) as Record<string, unknown>);
+    const resolved = await withPersonalityMetadata(
+      orgId,
+      req.params.id,
+      await resolveThemePresetKey((req.body ?? {}) as Record<string, unknown>),
+    );
     await updateBrand(orgId, req.params.id, resolved as Partial<BrandProfileRow>);
     res.json({ ok: true });
   }),

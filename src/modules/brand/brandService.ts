@@ -12,6 +12,7 @@ import { ConfigError, NotFoundError } from '../../lib/errors';
 import { childLogger } from '../../lib/logger';
 import type {
   BrandColors,
+  BrandPersonality,
   BrandProfile,
   BrandProfileRow,
   BrandTheme,
@@ -19,6 +20,20 @@ import type {
   Json,
   ThemePresetRow,
 } from '../../types';
+
+/** Read clamped personality scales from a brand's metadata jsonb (or undefined). */
+function readPersonality(metadata: Json | null | undefined): BrandPersonality | undefined {
+  const p = (metadata as { personality?: Record<string, unknown> } | null)?.personality;
+  if (!p || typeof p !== 'object') return undefined;
+  const num = (v: unknown, d: number) =>
+    typeof v === 'number' && v >= 0 && v <= 1 ? v : d;
+  return {
+    aggression: num(p.aggression, 0.5),
+    minimalism: num(p.minimalism, 0.5),
+    luxury: num(p.luxury, 0.5),
+    energy: num(p.energy, 0.5),
+  };
+}
 
 const log = childLogger({ module: 'brand' });
 
@@ -83,6 +98,7 @@ function rowToProfile(brand: BrandProfileRow, theme: BrandTheme): BrandProfile {
     logoUrl: brand.logo_url,
     voiceKeywords: brand.voice_keywords ?? [],
     voiceAvoid: brand.voice_avoid ?? [],
+    personality: readPersonality(brand.metadata),
     theme,
   };
 }

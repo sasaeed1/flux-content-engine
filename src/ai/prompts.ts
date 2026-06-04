@@ -36,6 +36,16 @@ function brandVoiceBlock(brand: BrandProfile): string {
   if (brand.voiceAvoid.length > 0) {
     lines.push(`- AVOID these traits: ${brand.voiceAvoid.join(', ')}`);
   }
+  const p = brand.personality;
+  if (p) {
+    const desc: string[] = [];
+    if (p.aggression >= 0.66) desc.push('punchy + bold (short, high-contrast lines, strong claims)');
+    else if (p.aggression <= 0.34) desc.push('calm + measured (softer, considered phrasing)');
+    if (p.minimalism >= 0.66) desc.push('minimal (fewer words per slide, lots of breathing room)');
+    else if (p.minimalism <= 0.34) desc.push('rich + dense (more detail and texture)');
+    if (p.luxury >= 0.66) desc.push('premium + refined (elevated, aspirational word choice)');
+    if (desc.length > 0) lines.push(`- personality: ${desc.join('; ')}`);
+  }
   return lines.join('\n');
 }
 
@@ -146,7 +156,7 @@ export const carouselContentSchema = z.object({
   caption: z.string(),
   // Was .min(8) — too strict. Some providers occasionally return fewer when
   // the topic is narrow. Composer's hashtag normaliser tops up if needed.
-  hashtags: z.array(z.string()).min(3),
+  hashtags: z.array(z.string()).min(1),
   slides: z
     .array(
       z.object({
@@ -260,7 +270,7 @@ export const singlePostContentSchema = z.object({
   caption: z.string(),
   // Was .min(8) — too strict. Some providers occasionally return fewer when
   // the topic is narrow. Composer's hashtag normaliser tops up if needed.
-  hashtags: z.array(z.string()).min(3),
+  hashtags: z.array(z.string()).min(1),
   data: z.record(z.string(), slideDataValueSchema),
 });
 
@@ -311,7 +321,7 @@ export const captionSchema = z.object({
   caption: z.string(),
   // Was .min(8) — too strict. Some providers occasionally return fewer when
   // the topic is narrow. Composer's hashtag normaliser tops up if needed.
-  hashtags: z.array(z.string()).min(3),
+  hashtags: z.array(z.string()).min(1),
 });
 
 export function buildCaptionPrompt(input: {
@@ -347,7 +357,7 @@ export function buildCaptionPrompt(input: {
 export const hashtagsSchema = z.object({
   // Was .min(8) — too strict. Some providers occasionally return fewer when
   // the topic is narrow. Composer's hashtag normaliser tops up if needed.
-  hashtags: z.array(z.string()).min(3),
+  hashtags: z.array(z.string()).min(1),
 });
 
 export function buildHashtagsPrompt(input: {

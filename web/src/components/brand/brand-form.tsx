@@ -51,6 +51,13 @@ export function BrandForm({ brand, themes }: Props) {
     themePresetKey: brand?.theme.presetKey ?? '',
   });
 
+  const [personality, setPersonality] = useState({
+    aggression: brand?.personality?.aggression ?? 0.5,
+    minimalism: brand?.personality?.minimalism ?? 0.5,
+    luxury: brand?.personality?.luxury ?? 0.5,
+    energy: brand?.personality?.energy ?? 0.5,
+  });
+
   const submit = () =>
     start(async () => {
       setStatus(null);
@@ -70,6 +77,7 @@ export function BrandForm({ brand, themes }: Props) {
           .map((s) => s.trim())
           .filter(Boolean),
         themePresetKey: form.themePresetKey.trim() || null,
+        personality,
       };
       try {
         if (isCreating) {
@@ -221,6 +229,40 @@ export function BrandForm({ brand, themes }: Props) {
           </div>
         </Section>
 
+        <Section title="Personality">
+          <p className="-mt-1 text-[11px] text-muted-foreground">
+            Shape how Flux writes + designs — these bias every generation.
+          </p>
+          <PersonalitySlider
+            label="Boldness"
+            left="Calm"
+            right="Bold"
+            value={personality.aggression}
+            onChange={(v) => setPersonality((p) => ({ ...p, aggression: v }))}
+          />
+          <PersonalitySlider
+            label="Minimalism"
+            left="Rich"
+            right="Minimal"
+            value={personality.minimalism}
+            onChange={(v) => setPersonality((p) => ({ ...p, minimalism: v }))}
+          />
+          <PersonalitySlider
+            label="Luxury"
+            left="Casual"
+            right="Premium"
+            value={personality.luxury}
+            onChange={(v) => setPersonality((p) => ({ ...p, luxury: v }))}
+          />
+          <PersonalitySlider
+            label="Energy"
+            left="Still"
+            right="Energetic"
+            value={personality.energy}
+            onChange={(v) => setPersonality((p) => ({ ...p, energy: v }))}
+          />
+        </Section>
+
         <div className="flex items-center justify-between gap-3">
           <div className="text-xs text-muted-foreground">
             {status?.kind === 'ok' && (
@@ -303,6 +345,43 @@ function Section({ title, children }: { title: string; children: React.ReactNode
       </h2>
       <div className="mt-4 space-y-4">{children}</div>
     </section>
+  );
+}
+
+function PersonalitySlider({
+  label,
+  left,
+  right,
+  value,
+  onChange,
+}: {
+  label: string;
+  left: string;
+  right: string;
+  value: number;
+  onChange: (v: number) => void;
+}) {
+  return (
+    <div className="space-y-1.5">
+      <div className="flex items-center justify-between">
+        <Label>{label}</Label>
+        <span className="font-mono text-[11px] text-muted-foreground">
+          {Math.round(value * 100)}
+        </span>
+      </div>
+      <input
+        type="range"
+        min={0}
+        max={100}
+        value={Math.round(value * 100)}
+        onChange={(e) => onChange(Number(e.target.value) / 100)}
+        className="w-full accent-primary"
+      />
+      <div className="flex items-center justify-between text-[10px] uppercase tracking-wider text-muted-foreground/70">
+        <span>{left}</span>
+        <span>{right}</span>
+      </div>
+    </div>
   );
 }
 

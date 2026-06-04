@@ -55,6 +55,17 @@ export interface BrandTypography {
   [extra: string]: string | number | undefined;
 }
 
+export interface BrandPersonality {
+  /** 0..1 — bolder, tighter, higher-contrast copy + visuals. */
+  aggression: number;
+  /** 0..1 — more whitespace, fewer words per slide. */
+  minimalism: number;
+  /** 0..1 — refined, premium, aspirational. */
+  luxury: number;
+  /** 0..1 — motion / animation intensity (reels). */
+  energy: number;
+}
+
 export interface BrandProfile {
   id: string;
   organizationId: string;
@@ -67,6 +78,7 @@ export interface BrandProfile {
   logoUrl: string | null;
   voiceKeywords: string[];
   voiceAvoid: string[];
+  personality?: BrandPersonality;
   theme: BrandTheme;
 }
 

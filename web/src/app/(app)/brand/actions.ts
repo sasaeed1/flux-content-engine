@@ -15,6 +15,7 @@ export async function updateBrandAction(
     voiceKeywords?: string[];
     voiceAvoid?: string[];
     themePresetKey?: string | null;
+    personality?: { aggression: number; minimalism: number; luxury: number; energy: number };
   },
 ) {
   await api.updateBrand(brandId, patch);
@@ -32,6 +33,7 @@ export async function createBrandAction(body: {
   voiceKeywords?: string[];
   voiceAvoid?: string[];
   themePresetKey?: string | null;
+  personality?: { aggression: number; minimalism: number; luxury: number; energy: number };
 }) {
   const res = await api.createBrand({
     ...body,

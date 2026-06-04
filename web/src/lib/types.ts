@@ -33,6 +33,12 @@ export interface BrandProfile {
   logoUrl: string | null;
   voiceKeywords: string[];
   voiceAvoid: string[];
+  personality?: {
+    aggression: number;
+    minimalism: number;
+    luxury: number;
+    energy: number;
+  };
   theme: {
     presetKey: string | null;
     colors: Record<string, string>;
