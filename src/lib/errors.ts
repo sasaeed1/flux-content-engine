@@ -84,6 +84,20 @@ export class DatabaseError extends AppError {
   }
 }
 
+export class RateLimitError extends AppError {
+  readonly retryAfterSec: number;
+
+  constructor(retryAfterSec: number, message = 'Rate limit exceeded — please slow down') {
+    super(message, {
+      code: 'RATE_LIMITED',
+      retryable: true,
+      status: 429,
+      context: { retryAfterSec },
+    });
+    this.retryAfterSec = retryAfterSec;
+  }
+}
+
 export function toErrorMessage(err: unknown): string {
   if (err instanceof Error) return err.message;
   if (typeof err === 'string') return err;

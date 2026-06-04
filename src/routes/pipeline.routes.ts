@@ -8,6 +8,7 @@
  */
 import { Router } from 'express';
 import { asyncHandler, requireTenant } from '../middleware';
+import { generationRateLimit } from '../lib/rateLimit';
 import { NotFoundError, ValidationError } from '../lib/errors';
 import { runPipeline } from '../pipeline/pipeline';
 import { supabase } from '../lib/supabase';
@@ -46,6 +47,7 @@ function buildPipelineOptions(orgId: string, body: Record<string, unknown>): Pip
 /** POST /tenant/pipeline/run — synchronous; check `body.status` to branch. */
 router.post(
   '/tenant/pipeline/run',
+  generationRateLimit,
   asyncHandler(async (req, res) => {
     const orgId = req.tenant!.organizationId;
     const body = (req.body ?? {}) as Record<string, unknown>;
@@ -65,6 +67,7 @@ router.post(
  */
 router.post(
   '/tenant/pipeline/batch',
+  generationRateLimit,
   asyncHandler(async (req, res) => {
     const orgId = req.tenant!.organizationId;
     const body = (req.body ?? {}) as Record<string, unknown>;
@@ -131,6 +134,7 @@ router.post(
  */
 router.post(
   '/tenant/pipeline/run-stream',
+  generationRateLimit,
   asyncHandler(async (req, res) => {
     const orgId = req.tenant!.organizationId;
     const body = (req.body ?? {}) as Record<string, unknown>;

@@ -4,6 +4,7 @@
  */
 import { Router } from 'express';
 import { asyncHandler, requireTenant } from '../middleware';
+import { generationRateLimit } from '../lib/rateLimit';
 import { ValidationError } from '../lib/errors';
 import {
   getOrgById,
@@ -258,6 +259,7 @@ router.post(
 
 router.post(
   '/tenant/topics/generate',
+  generationRateLimit,
   asyncHandler(async (req, res) => {
     const orgId = req.tenant!.organizationId;
     const count = Math.min(20, Math.max(1, Number(req.body?.count) || 5));
@@ -483,6 +485,7 @@ router.delete(
 // flip this to a background job.
 router.post(
   '/tenant/brand/assets/:id/extract',
+  generationRateLimit,
   asyncHandler(async (req, res) => {
     const orgId = req.tenant!.organizationId;
     const id = req.params.id;

@@ -3,6 +3,7 @@
  */
 import { Router } from 'express';
 import { asyncHandler, requireTenant } from '../middleware';
+import { generationRateLimit } from '../lib/rateLimit';
 import { ValidationError } from '../lib/errors';
 import { env } from '../config/env';
 import { startReelGeneration } from '../modules/motion/motionService';
@@ -41,6 +42,7 @@ router.get(
  * the background and flips the row to `ready`. Poll GET /tenant/reels/:id. */
 router.post(
   '/tenant/reels',
+  generationRateLimit,
   asyncHandler(async (req, res) => {
     if (!env.ENABLE_MOTION) {
       throw new ValidationError('Motion engine is disabled (ENABLE_MOTION=false)');

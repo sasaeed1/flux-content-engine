@@ -15,6 +15,7 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import { asyncHandler, requireTenant } from '../middleware';
+import { generationRateLimit } from '../lib/rateLimit';
 import { ValidationError, AppError } from '../lib/errors';
 import { getOrgById } from '../db/repositories';
 import { loadBrandProfile } from '../modules/brand/brandService';
@@ -68,6 +69,7 @@ const hooksResponseSchema = z.object({
 
 router.post(
   '/tenant/intelligence/hooks',
+  generationRateLimit,
   asyncHandler(async (req, res) => {
     const orgId = req.tenant!.organizationId;
     const body = hooksRequestSchema.parse(req.body ?? {});
@@ -149,6 +151,7 @@ const topicScoreResponseSchema = z.object({
 
 router.post(
   '/tenant/intelligence/topics/score',
+  generationRateLimit,
   asyncHandler(async (req, res) => {
     const orgId = req.tenant!.organizationId;
     const body = topicScoreRequestSchema.parse(req.body ?? {});
@@ -317,6 +320,7 @@ const commandResponseSchema = z.object({
 
 router.post(
   '/tenant/intelligence/command',
+  generationRateLimit,
   asyncHandler(async (req, res) => {
     const orgId = req.tenant!.organizationId;
     const body = commandRequestSchema.parse(req.body ?? {});

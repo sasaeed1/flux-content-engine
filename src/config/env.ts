@@ -104,6 +104,12 @@ const schema = z.object({
   REEL_DEFAULT_ASPECT: z.enum(['reel', 'square', 'portrait']).default('reel'),
   MOTION_RENDER_TIMEOUT_SEC: asNum(300),
 
+  // ----- rate limiting / abuse prevention -----
+  RATE_LIMIT_ENABLED: asBool(true),
+  RATE_LIMIT_IP_PER_MIN: asNum(600), // coarse per-IP DoS safety net
+  RATE_LIMIT_TENANT_PER_MIN: asNum(240), // per-org general API cap
+  RATE_LIMIT_GENERATION_PER_MIN: asNum(20), // per-org cap on expensive endpoints
+
   // ----- scheduler -----
   ENABLE_INTERNAL_SCHEDULER: asBool(true),
   ENABLE_DAILY_PIPELINE_CRON: asBool(false),
