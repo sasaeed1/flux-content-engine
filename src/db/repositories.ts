@@ -17,6 +17,7 @@ import type {
   GeneratedAssetRow,
   GeneratedCarouselRow,
   GeneratedPostRow,
+  GeneratedReelRow,
   InstagramAccountRow,
   Json,
   OrgMembershipRow,
@@ -561,6 +562,89 @@ export async function insertAsset(
     await supabase.from('generated_assets').insert(row).select('*').single(),
     'insertAsset',
   );
+}
+
+/** Rendered slide PNGs for a carousel, in slide order — the reel's input. */
+export async function listRenderAssetsForCarousel(
+  orgId: string,
+  carouselId: string,
+): Promise<GeneratedAssetRow[]> {
+  return unwrap(
+    await supabase
+      .from('generated_assets')
+      .select('*')
+      .eq('organization_id', orgId)
+      .eq('carousel_id', carouselId)
+      .eq('type', 'render')
+      .order('slide_index', { ascending: true }),
+    'listRenderAssetsForCarousel',
+  );
+}
+
+/* ============================================================
+ *  GENERATED REELS  (motion engine)
+ * ============================================================ */
+
+export async function insertReel(row: Partial<GeneratedReelRow>): Promise<GeneratedReelRow> {
+  return unwrap(
+    await supabase.from('generated_reels').insert(row).select('*').single(),
+    'insertReel',
+  );
+}
+
+export async function getReelByIdScoped(
+  orgId: string,
+  id: string,
+): Promise<GeneratedReelRow | null> {
+  return unwrapMaybe(
+    await supabase
+      .from('generated_reels')
+      .select('*')
+      .eq('organization_id', orgId)
+      .eq('id', id)
+      .maybeSingle(),
+    'getReelByIdScoped',
+  );
+}
+
+export async function listReelsForOrg(orgId: string, limit = 50): Promise<GeneratedReelRow[]> {
+  return unwrap(
+    await supabase
+      .from('generated_reels')
+      .select('*')
+      .eq('organization_id', orgId)
+      .order('created_at', { ascending: false })
+      .limit(limit),
+    'listReelsForOrg',
+  );
+}
+
+export async function listReelsForCarousel(
+  orgId: string,
+  carouselId: string,
+): Promise<GeneratedReelRow[]> {
+  return unwrap(
+    await supabase
+      .from('generated_reels')
+      .select('*')
+      .eq('organization_id', orgId)
+      .eq('carousel_id', carouselId)
+      .order('created_at', { ascending: false }),
+    'listReelsForCarousel',
+  );
+}
+
+export async function updateReel(
+  orgId: string,
+  id: string,
+  patch: Partial<GeneratedReelRow>,
+): Promise<void> {
+  const { error } = await supabase
+    .from('generated_reels')
+    .update(patch)
+    .eq('id', id)
+    .eq('organization_id', orgId);
+  if (error) throw new DatabaseError(`updateReel: ${error.message}`);
 }
 
 /* ============================================================

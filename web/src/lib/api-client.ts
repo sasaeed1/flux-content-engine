@@ -15,6 +15,7 @@ import type {
   Organization,
   OrgOverview,
   PipelineRun,
+  ReelRow,
   Template,
   ThemePreset,
 } from './types';
@@ -280,6 +281,17 @@ export const api = {
       method: 'POST',
       json: { carouselIds, publishAt },
     }),
+
+  // ── motion / reels ────────────────────────────────────────────────────
+  reels: {
+    list: (carouselId?: string) =>
+      engineFetch<{ reels: ReelRow[] }>(
+        `/api/tenant/reels${carouselId ? `?carouselId=${carouselId}` : ''}`,
+      ),
+    get: (id: string) => engineFetch<{ reel: ReelRow }>(`/api/tenant/reels/${id}`),
+    generate: (body: { carouselId: string; aspect?: string; presetKey?: string }) =>
+      engineFetch<{ reel: ReelRow }>('/api/tenant/reels', { method: 'POST', json: body }),
+  },
 
   // ── intelligence layer (Phase 1) ──────────────────────────────────────
   intelligence: {

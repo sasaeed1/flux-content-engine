@@ -104,6 +104,26 @@ export interface CarouselRow {
   updated_at: string;
 }
 
+export interface ReelRow {
+  id: string;
+  organization_id: string;
+  carousel_id: string | null;
+  run_id: string | null;
+  preset_key: string | null;
+  aspect: string;
+  width: number;
+  height: number;
+  duration_sec: number | null;
+  fps: number | null;
+  storage_path: string | null;
+  public_url: string | null;
+  bytes: number | null;
+  status: string;
+  metadata?: Record<string, unknown> | null;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface OrgOverview {
   organization_id: string;
   name: string;

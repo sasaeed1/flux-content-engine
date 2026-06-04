@@ -95,6 +95,15 @@ const schema = z.object({
   // ----- renderer -----
   CHROME_EXECUTABLE_PATH: z.string().default(''),
 
+  // ----- motion / reels (zero-cost ffmpeg reel engine) -----
+  ENABLE_MOTION: asBool(true),
+  // Leave blank to use the bundled ffmpeg-static binary; set to a system
+  // ffmpeg path (e.g. /usr/bin/ffmpeg) to override.
+  FFMPEG_PATH: z.string().default(''),
+  SUPABASE_REEL_BUCKET: z.string().default('content-reels'),
+  REEL_DEFAULT_ASPECT: z.enum(['reel', 'square', 'portrait']).default('reel'),
+  MOTION_RENDER_TIMEOUT_SEC: asNum(300),
+
   // ----- scheduler -----
   ENABLE_INTERNAL_SCHEDULER: asBool(true),
   ENABLE_DAILY_PIPELINE_CRON: asBool(false),

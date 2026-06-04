@@ -18,6 +18,7 @@ import {
   Activity,
   CalendarRange,
   ChevronsLeft,
+  Film,
   Fingerprint,
   LayoutGrid,
   PanelLeft,
@@ -44,6 +45,7 @@ const GROUPS: Group[] = [
     intent: 'Create',
     items: [
       { href: '/forge', label: 'Forge', icon: Wand2, cta: true },
+      { href: '/motion', label: 'Motion', icon: Film },
       { href: '/campaign', label: 'Campaign', icon: CalendarRange },
     ],
   },

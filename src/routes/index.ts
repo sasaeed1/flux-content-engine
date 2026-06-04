@@ -8,6 +8,7 @@ import ops from './ops.routes';
 import webhooks from './webhooks.routes';
 import sso from './sso.routes';
 import intelligence from './intelligence.routes';
+import reels from './reels.routes';
 
 const router = Router();
 
@@ -25,6 +26,7 @@ api.use(tenant);
 api.use(pipeline);
 api.use(edit);
 api.use(intelligence);
+api.use(reels);
 api.use(ops);
 router.use('/api', api);
 

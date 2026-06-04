@@ -433,6 +433,26 @@ export interface GeneratedAssetRow {
   created_at: string;
 }
 
+export interface GeneratedReelRow {
+  id: string;
+  organization_id: string;
+  carousel_id: string | null;
+  run_id: string | null;
+  preset_key: string | null;
+  aspect: string;
+  width: number;
+  height: number;
+  duration_sec: number | null;
+  fps: number | null;
+  storage_path: string | null;
+  public_url: string | null;
+  bytes: number | null;
+  status: string;
+  metadata: Json;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface PublishQueueRow {
   id: string;
   organization_id: string;

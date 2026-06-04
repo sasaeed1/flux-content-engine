@@ -231,6 +231,9 @@ set `CONTENT_ENGINE_URL`, `CONTENT_ENGINE_API_KEY`, `ORG_API_KEY` env vars →
 | GET    | `/api/tenant/pipeline/runs/:id`            | tenant        | Inspect a run                          |
 | POST   | `/api/tenant/carousels/:id/approve`        | tenant        | Approve a manual-mode carousel         |
 | POST   | `/api/tenant/posts/:id/approve`            | tenant        | Approve a manual-mode single post      |
+| POST   | `/api/tenant/reels`                        | tenant        | Generate a cinematic reel from a carousel (async) |
+| GET    | `/api/tenant/reels`                        | tenant        | List reels (optionally `?carouselId=`) |
+| GET    | `/api/tenant/reels/:id`                    | tenant        | Reel status + URL (poll while rendering) |
 | GET    | `/api/tenant/instagram-accounts`           | tenant        | Connected IG accounts (tokens hidden)  |
 | POST   | `/api/ops/queue/process-publish`           | ops           | Drain the publish queue                |
 | POST   | `/api/ops/queue/process-retries`           | ops           | Retry failed pipeline jobs             |

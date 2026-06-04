@@ -7,6 +7,7 @@ import { ApprovalBar } from '@/components/carousel/approval-bar';
 import { CaptionEditor } from '@/components/carousel/caption-editor';
 import { CtaEditor } from '@/components/carousel/cta-editor';
 import { RestyleSwitcher } from '@/components/carousel/restyle-switcher';
+import { ReelStudio } from '@/components/motion/reel-studio';
 import { api } from '@/lib/api-client';
 import { fmtRelative } from '@/lib/format';
 
@@ -41,6 +42,13 @@ export default async function CarouselDetailPage({
   const currentStyleModeKey =
     ((carousel as unknown as { metadata?: { style_mode_key?: string } | null })
       .metadata?.style_mode_key as string | undefined) ?? null;
+
+  let reels: Awaited<ReturnType<typeof api.reels.list>>['reels'] = [];
+  try {
+    ({ reels } = await api.reels.list(id));
+  } catch {
+    /* generated_reels table may not exist until the migration is applied */
+  }
 
   return (
     <div className="min-w-0 space-y-7">
@@ -122,6 +130,8 @@ export default async function CarouselDetailPage({
 
         <aside className="space-y-4">
           <ApprovalBar carouselId={carousel.id} status={carousel.status} />
+
+          <ReelStudio carouselId={carousel.id} initialReels={reels} />
 
           <div className="solid-card rounded-lg p-5 text-xs text-fg-muted">
             {[
