@@ -49,6 +49,9 @@ async function launch(): Promise<Browser> {
   return _launching;
 }
 
+/** Shared headless browser getter — reused by the kinetic frame renderer. */
+export const getBrowser = launch;
+
 export async function shutdownRenderer(): Promise<void> {
   if (_browser) {
     try {

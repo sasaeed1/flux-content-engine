@@ -47,6 +47,7 @@ export function ReelStudio({
   const [reels, setReels] = useState<ReelRow[]>(initialReels);
   const [aspect, setAspect] = useState('reel');
   const [presetKey, setPresetKey] = useState('cinematic');
+  const [kinetic, setKinetic] = useState(false);
   const [pending, start] = useTransition();
   const [err, setErr] = useState<string | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -92,7 +93,7 @@ export function ReelStudio({
     setErr(null);
     start(async () => {
       try {
-        const reel = await generateReelAction(carouselId, aspect, presetKey);
+        const reel = await generateReelAction(carouselId, aspect, presetKey, kinetic);
         setReels((prev) => [reel, ...prev]);
       } catch (e) {
         setErr(e instanceof Error ? e.message : 'Reel generation failed.');
@@ -142,6 +143,29 @@ export function ReelStudio({
             ))}
           </div>
         </div>
+
+        <button
+          type="button"
+          role="switch"
+          aria-checked={kinetic}
+          onClick={() => setKinetic((v) => !v)}
+          className="flex w-full items-center gap-2.5 text-left"
+        >
+          <span
+            className={`relative h-5 w-9 shrink-0 rounded-full transition ${
+              kinetic ? 'bg-flux-cyan' : 'border border-edge-subtle bg-surface-2'
+            }`}
+          >
+            <span
+              className={`absolute top-0.5 h-4 w-4 rounded-full bg-white transition-all ${
+                kinetic ? 'left-[18px]' : 'left-0.5'
+              }`}
+            />
+          </span>
+          <span className="text-xs text-fg-muted">
+            Kinetic hook intro <span className="text-fg-dim">· animated text, slower</span>
+          </span>
+        </button>
 
         <button
           type="button"

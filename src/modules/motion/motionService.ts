@@ -2,16 +2,15 @@
  * Motion service — orchestrates reel generation for a carousel:
  *
  *   carousel -> ordered render-slide URLs -> composeReel (ffmpeg) ->
+ *   [optional kinetic hook intro, crossfaded on the front] ->
  *   upload MP4 to the content-reels bucket -> generated_reels row.
  *
  * Generation is ASYNC: startReelGeneration() inserts a `processing` row and
- * returns immediately, then the render runs in the background and flips the
- * row to `ready` (or `failed`). The web UI polls GET /tenant/reels/:id. This
- * keeps the HTTP request fast and avoids any proxy/serverless timeout on the
- * ~60-90s ffmpeg render.
+ * returns immediately; the render runs in the background and flips the row to
+ * `ready` (or `failed`). The web UI polls GET /tenant/reels/:id.
  *
  * The preset is inherited from the carousel's style mode (its motion DNA)
- * unless the caller overrides it. Tenant-scoped throughout.
+ * unless overridden. Tenant-scoped throughout.
  */
 import fs from 'node:fs';
 import os from 'node:os';
@@ -28,13 +27,19 @@ import {
   listRenderAssetsForCarousel,
   updateReel,
 } from '../../db/repositories';
-import { composeReel } from './composer';
+import { composeReel, concatWithXfade } from './composer';
+import { captureKineticClip } from './frameRenderer';
+import { kineticHookHtml } from './kineticTemplates';
 import { presetForStyleMotion, defaultPreset } from './presets';
 import { REEL_DIMENSIONS } from './types';
 import type { MotionPhilosophy, MotionPreset, ReelAspect } from './types';
 import type { GeneratedCarouselRow, GeneratedReelRow, Json } from '../../types';
 
 const log = childLogger({ module: 'motion:service' });
+
+/** Seconds the kinetic hook intro card runs before crossfading into the body. */
+const KINETIC_INTRO_SEC = 2.6;
+const KINETIC_TRANSITION_SEC = 0.5;
 
 export interface GenerateReelInput {
   orgId: string;
@@ -43,11 +48,13 @@ export interface GenerateReelInput {
   aspect?: ReelAspect;
   /** Explicit preset override (e.g. "motion-cinematic" or "kinetic"). */
   presetKey?: string;
+  /** Prepend an animated-text kinetic hook intro card. Slower (Puppeteer). */
+  kinetic?: boolean;
 }
 
 /**
  * Validate + enqueue a reel render. Inserts a `processing` row and kicks the
- * ffmpeg render off in the background, returning the row immediately.
+ * render off in the background, returning the row immediately.
  */
 export async function startReelGeneration(
   input: GenerateReelInput,
@@ -68,6 +75,8 @@ export async function startReelGeneration(
   const preset = await resolvePreset(orgId, carousel, input.presetKey);
   const dims = REEL_DIMENSIONS[aspect];
   const reelId = randomUUID();
+  const hook = (carousel.hook ?? carousel.title ?? '').toString().trim();
+  const kinetic = input.kinetic === true && hook.length > 0;
 
   const row = await insertReel({
     id: reelId,
@@ -79,37 +88,70 @@ export async function startReelGeneration(
     width: dims.width,
     height: dims.height,
     status: 'processing',
-    metadata: { slideCount: sources.length, presetName: preset.name },
+    metadata: { slideCount: sources.length, presetName: preset.name, kinetic },
   });
 
-  // Fire-and-forget — the render flips the row to ready/failed. Errors are
-  // handled inside renderReel; the catch here only guards the unawaited promise.
-  void renderReel(reelId, orgId, sources, preset, aspect).catch((err) => {
+  void renderReel(reelId, orgId, sources, preset, aspect, { kinetic, hook }).catch((err) => {
     log.error({ reelId, error: toErrorMessage(err) }, 'Background reel render rejected');
   });
 
   return row;
 }
 
-/** Background render: compose -> upload -> mark ready (or failed). */
+/** Background render: compose body (+ optional kinetic intro) -> upload -> ready. */
 async function renderReel(
   reelId: string,
   orgId: string,
   sources: string[],
   preset: MotionPreset,
   aspect: ReelAspect,
+  opts: { kinetic: boolean; hook: string },
 ): Promise<void> {
-  const tmpOut = path.join(os.tmpdir(), `flux-reel-${reelId}.mp4`);
+  const dims = REEL_DIMENSIONS[aspect];
+  const fps = Math.max(12, Math.round(preset.fps));
+  const bodyOut = path.join(os.tmpdir(), `flux-reel-body-${reelId}.mp4`);
+  const introOut = path.join(os.tmpdir(), `flux-reel-intro-${reelId}.mp4`);
+  const finalOut = path.join(os.tmpdir(), `flux-reel-final-${reelId}.mp4`);
+  const temps = [bodyOut, introOut, finalOut];
+
   try {
     const slides = sources.map((source, index) => ({ index, source }));
-    const result = await composeReel({ slides, preset, aspect, outPath: tmpOut });
+    const body = await composeReel({ slides, preset, aspect, outPath: bodyOut });
 
-    const body = fs.readFileSync(tmpOut);
+    let outPath = bodyOut;
+    let durationSec = body.durationSec;
+
+    if (opts.kinetic && opts.hook) {
+      // Animated-text hook card, then crossfade into the Ken Burns body.
+      await captureKineticClip({
+        html: kineticHookHtml({ hook: opts.hook, width: dims.width, height: dims.height }),
+        width: dims.width,
+        height: dims.height,
+        fps,
+        durationSec: KINETIC_INTRO_SEC,
+        outPath: introOut,
+      });
+      await concatWithXfade({
+        clipA: introOut,
+        clipB: bodyOut,
+        aDurationSec: KINETIC_INTRO_SEC,
+        transitionSec: KINETIC_TRANSITION_SEC,
+        width: dims.width,
+        height: dims.height,
+        fps,
+        outPath: finalOut,
+      });
+      outPath = finalOut;
+      durationSec =
+        Math.round((KINETIC_INTRO_SEC + body.durationSec - KINETIC_TRANSITION_SEC) * 100) / 100;
+    }
+
+    const buf = fs.readFileSync(outPath);
     const storagePath = storagePaths.reel(orgId, reelId);
     const { publicUrl } = await uploadBuffer({
       bucket: env.SUPABASE_REEL_BUCKET,
       path: storagePath,
-      body,
+      body: buf,
       contentType: 'video/mp4',
     });
 
@@ -117,11 +159,14 @@ async function renderReel(
       status: 'ready',
       storage_path: storagePath,
       public_url: publicUrl,
-      bytes: result.bytes,
-      duration_sec: result.durationSec,
-      fps: result.fps,
+      bytes: buf.length,
+      duration_sec: durationSec,
+      fps,
     });
-    log.info({ reelId, bytes: result.bytes, durationSec: result.durationSec }, 'Reel ready');
+    log.info(
+      { reelId, kinetic: opts.kinetic, bytes: buf.length, durationSec },
+      'Reel ready',
+    );
   } catch (err) {
     const message = toErrorMessage(err);
     log.error({ reelId, error: message }, 'Reel render failed');
@@ -134,10 +179,12 @@ async function renderReel(
       /* swallow — best effort */
     }
   } finally {
-    try {
-      if (fs.existsSync(tmpOut)) fs.unlinkSync(tmpOut);
-    } catch {
-      /* best-effort temp cleanup */
+    for (const f of temps) {
+      try {
+        if (fs.existsSync(f)) fs.unlinkSync(f);
+      } catch {
+        /* best-effort temp cleanup */
+      }
     }
   }
 }

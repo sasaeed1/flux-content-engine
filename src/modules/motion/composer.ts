@@ -198,6 +198,59 @@ export async function composeReel(input: ReelRenderInput): Promise<ReelRenderRes
 }
 
 /**
+ * Crossfade two pre-rendered clips into one (used to prepend a kinetic intro
+ * to a Ken Burns reel). Both clips are normalised to the same fps/size/sar.
+ */
+export async function concatWithXfade(opts: {
+  clipA: string;
+  clipB: string;
+  aDurationSec: number;
+  transitionSec: number;
+  width: number;
+  height: number;
+  fps: number;
+  outPath: string;
+}): Promise<void> {
+  const td = Math.max(0.2, opts.transitionSec);
+  const offset = round3(Math.max(0.1, opts.aDurationSec - td));
+  const fc =
+    `[0:v]fps=${opts.fps},scale=${opts.width}:${opts.height},setsar=1,format=yuv420p[a];` +
+    `[1:v]fps=${opts.fps},scale=${opts.width}:${opts.height},setsar=1,format=yuv420p[b];` +
+    `[a][b]xfade=transition=fade:duration=${round3(td)}:offset=${offset}[v]`;
+  await runFfmpeg({
+    args: [
+      '-i',
+      opts.clipA,
+      '-i',
+      opts.clipB,
+      '-filter_complex',
+      fc,
+      '-map',
+      '[v]',
+      '-an',
+      '-c:v',
+      'libx264',
+      '-pix_fmt',
+      'yuv420p',
+      '-preset',
+      'veryfast',
+      '-crf',
+      '21',
+      '-maxrate',
+      '8M',
+      '-bufsize',
+      '16M',
+      '-r',
+      String(opts.fps),
+      '-movflags',
+      '+faststart',
+      opts.outPath,
+    ],
+    label: 'reel:concat',
+  });
+}
+
+/**
  * Build the zoompan z/x/y expressions for a Ken Burns move. Expressions use
  * the output frame index `on` for deterministic, drift-free linear motion.
  */

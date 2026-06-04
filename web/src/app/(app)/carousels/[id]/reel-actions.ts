@@ -9,8 +9,9 @@ export async function generateReelAction(
   carouselId: string,
   aspect?: string,
   presetKey?: string,
+  kinetic?: boolean,
 ): Promise<ReelRow> {
-  const { reel } = await api.reels.generate({ carouselId, aspect, presetKey });
+  const { reel } = await api.reels.generate({ carouselId, aspect, presetKey, kinetic });
   revalidatePath(`/library/${carouselId}`);
   return reel;
 }

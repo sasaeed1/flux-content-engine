@@ -50,6 +50,7 @@ router.post(
       carouselId?: string;
       aspect?: string;
       presetKey?: string;
+      kinetic?: boolean;
     };
     if (!body.carouselId || typeof body.carouselId !== 'string') {
       throw new ValidationError('Field "carouselId" is required');
@@ -63,6 +64,7 @@ router.post(
       carouselId: body.carouselId,
       aspect,
       presetKey: typeof body.presetKey === 'string' ? body.presetKey : undefined,
+      kinetic: body.kinetic === true,
     });
     res.status(202).json({ reel });
   }),

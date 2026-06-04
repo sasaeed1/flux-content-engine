@@ -289,8 +289,12 @@ export const api = {
         `/api/tenant/reels${carouselId ? `?carouselId=${carouselId}` : ''}`,
       ),
     get: (id: string) => engineFetch<{ reel: ReelRow }>(`/api/tenant/reels/${id}`),
-    generate: (body: { carouselId: string; aspect?: string; presetKey?: string }) =>
-      engineFetch<{ reel: ReelRow }>('/api/tenant/reels', { method: 'POST', json: body }),
+    generate: (body: {
+      carouselId: string;
+      aspect?: string;
+      presetKey?: string;
+      kinetic?: boolean;
+    }) => engineFetch<{ reel: ReelRow }>('/api/tenant/reels', { method: 'POST', json: body }),
   },
 
   // ── intelligence layer (Phase 1) ──────────────────────────────────────
