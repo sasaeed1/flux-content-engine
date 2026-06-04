@@ -11,6 +11,7 @@
  */
 import { Router } from 'express';
 import { asyncHandler, requireTenant } from '../middleware';
+import { generationRateLimit } from '../lib/rateLimit';
 import { ValidationError, NotFoundError, AppError } from '../lib/errors';
 import {
   getOrgById,
@@ -61,6 +62,7 @@ router.post(
 
 router.post(
   '/tenant/carousels/:id/caption/rewrite',
+  generationRateLimit,
   asyncHandler(async (req, res) => {
     const orgId = req.tenant!.organizationId;
     const style = String(req.body?.style ?? 'rewrite') as CaptionStyle;
@@ -103,6 +105,7 @@ router.post(
 
 router.post(
   '/tenant/carousels/:id/cta/rewrite',
+  generationRateLimit,
   asyncHandler(async (req, res) => {
     const orgId = req.tenant!.organizationId;
     const variations = Math.max(1, Math.min(6, Number(req.body?.variations) || 3));
@@ -153,6 +156,7 @@ router.post(
 
 router.post(
   '/tenant/carousels/:id/slides/:idx/rewrite',
+  generationRateLimit,
   asyncHandler(async (req, res) => {
     const orgId = req.tenant!.organizationId;
     const idx = Number(req.params.idx);
@@ -215,6 +219,7 @@ router.post(
 
 router.post(
   '/tenant/carousels/:id/restyle',
+  generationRateLimit,
   asyncHandler(async (req, res) => {
     const orgId = req.tenant!.organizationId;
     const carouselId = req.params.id;
@@ -288,6 +293,7 @@ router.post(
 // calls this when the user finishes editing the streamed draft.
 router.post(
   '/tenant/carousels/:id/render',
+  generationRateLimit,
   asyncHandler(async (req, res) => {
     const orgId = req.tenant!.organizationId;
     const carouselId = req.params.id;
