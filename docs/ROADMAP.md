@@ -112,3 +112,14 @@ Today the n8n workflow is per-tenant (one workflow per org). Phase 5:
 3. **Outbound + IG DM bridge** (Phase 4) — completes the "ads → leads → CRM" loop.
 4. **Self-hosted images** (Phase 3) — biggest cost moat.
 5. Everything else is incremental + can be sequenced by demand.
+
+---
+
+## Long-term vision (deferred)
+
+Beyond the phases above, the strategic north star is the **AI Media Intelligence
+Studio** — Flux evolving from a content generator into a full AI creative
+production studio (upload raw images/video → agency-quality finished assets).
+This is **explicitly deferred** until the core platform is production-stable and
+must not divert current priorities. Full architecture is preserved in
+[`docs/FUTURE-AI-MEDIA-STUDIO.md`](FUTURE-AI-MEDIA-STUDIO.md).
