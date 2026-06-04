@@ -7,13 +7,18 @@
  *   finish:     vignette + film grain
  *
  * Zero API cost, zero GPU. Runs anywhere ffmpeg-static runs.
+ *
+ * Remote sources are downloaded to local temp files before rendering — the
+ * bundled static ffmpeg can segfault on https inputs in some container builds,
+ * and local files are faster + more reliable anyway.
  */
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { mkdtemp, writeFile, rm } from 'node:fs/promises';
 import { randomUUID } from 'node:crypto';
 import { childLogger } from '../../lib/logger';
-import { ValidationError } from '../../lib/errors';
+import { ExternalApiError, ValidationError } from '../../lib/errors';
 import { runFfmpeg } from './ffmpeg';
 import { REEL_DIMENSIONS } from './types';
 import type { ReelRenderInput, ReelRenderResult, TransitionKind, ZoomDirection } from './types';
@@ -24,6 +29,40 @@ const log = childLogger({ module: 'motion:composer' });
  *  already up-samples its crop window, so gradients/photos stay smooth. Bump
  *  to 2x only when a render needs extra crispness (≈4x the cost). */
 const SUPERSAMPLE = 1;
+
+interface LocalizedSources {
+  paths: string[];
+  cleanup: () => Promise<void>;
+}
+
+/** Download any http(s) sources to local temp files; pass local paths through. */
+async function localizeSources(sources: string[]): Promise<LocalizedSources> {
+  const needsDownload = sources.some((s) => /^https?:\/\//i.test(s));
+  if (!needsDownload) {
+    return { paths: sources, cleanup: async () => {} };
+  }
+  const dir = await mkdtemp(path.join(os.tmpdir(), 'flux-reel-src-'));
+  const paths: string[] = [];
+  for (let i = 0; i < sources.length; i++) {
+    const src = sources[i];
+    if (!/^https?:\/\//i.test(src)) {
+      paths.push(src);
+      continue;
+    }
+    const res = await fetch(src);
+    if (!res.ok) {
+      throw new ExternalApiError('storage', `fetch slide ${i} failed: ${res.status}`);
+    }
+    const buf = Buffer.from(await res.arrayBuffer());
+    const dest = path.join(dir, `slide-${i}.png`);
+    await writeFile(dest, buf);
+    paths.push(dest);
+  }
+  return {
+    paths,
+    cleanup: () => rm(dir, { recursive: true, force: true }),
+  };
+}
 
 export async function composeReel(input: ReelRenderInput): Promise<ReelRenderResult> {
   const slides = [...input.slides].sort((a, b) => a.index - b.index);
@@ -40,115 +79,122 @@ export async function composeReel(input: ReelRenderInput): Promise<ReelRenderRes
 
   const outPath = input.outPath ?? path.join(os.tmpdir(), `flux-reel-${randomUUID()}.mp4`);
 
-  // One -i per slide (ffmpeg can read local paths or https URLs directly).
-  const inputs: string[] = [];
-  for (const s of slides) inputs.push('-i', s.source);
+  // Pull remote slides local first (static ffmpeg segfaults on https inputs).
+  const { paths: localPaths, cleanup } = await localizeSources(slides.map((s) => s.source));
 
-  const sw = W * SUPERSAMPLE;
-  const sh = H * SUPERSAMPLE;
-  const parts: string[] = [];
+  try {
+    // One -i per slide.
+    const inputs: string[] = [];
+    for (const lp of localPaths) inputs.push('-i', lp);
 
-  // ---- per-slide Ken Burns clips ----
-  slides.forEach((s, i) => {
-    const { z, x, y } = kenBurns(p.zoom, p.zoomIntensity, frames);
-    parts.push(
-      `[${i}:v]scale=${sw}:${sh}:force_original_aspect_ratio=increase,` +
-        `crop=${sw}:${sh},` +
-        `zoompan=z='${z}':x='${x}':y='${y}':d=${frames}:fps=${fps}:s=${W}x${H},` +
-        `setsar=1,format=yuv420p[v${i}]`,
-    );
-  });
+    const sw = W * SUPERSAMPLE;
+    const sh = H * SUPERSAMPLE;
+    const parts: string[] = [];
 
-  // ---- join consecutive clips with xfade (or a single clip passthrough) ----
-  const n = slides.length;
-  let lastLabel: string;
-  if (n === 1) {
-    lastLabel = 'v0';
-  } else {
-    const transition = safeTransition(p.transition);
-    let prev = 'v0';
-    for (let i = 1; i < n; i++) {
-      const out = i === n - 1 ? 'vx' : `x${i}`;
-      const offset = round3(i * (p.slideDurationSec - transitionSec));
+    // ---- per-slide Ken Burns clips ----
+    slides.forEach((s, i) => {
+      const { z, x, y } = kenBurns(p.zoom, p.zoomIntensity, frames);
       parts.push(
-        `[${prev}][v${i}]xfade=transition=${transition}:` +
-          `duration=${round3(transitionSec)}:offset=${offset}[${out}]`,
+        `[${i}:v]scale=${sw}:${sh}:force_original_aspect_ratio=increase,` +
+          `crop=${sw}:${sh},` +
+          `zoompan=z='${z}':x='${x}':y='${y}':d=${frames}:fps=${fps}:s=${W}x${H},` +
+          `setsar=1,format=yuv420p[v${i}]`,
       );
-      prev = out;
+    });
+
+    // ---- join consecutive clips with xfade (or a single clip passthrough) ----
+    const n = slides.length;
+    let lastLabel: string;
+    if (n === 1) {
+      lastLabel = 'v0';
+    } else {
+      const transition = safeTransition(p.transition);
+      let prev = 'v0';
+      for (let i = 1; i < n; i++) {
+        const out = i === n - 1 ? 'vx' : `x${i}`;
+        const offset = round3(i * (p.slideDurationSec - transitionSec));
+        parts.push(
+          `[${prev}][v${i}]xfade=transition=${transition}:` +
+            `duration=${round3(transitionSec)}:offset=${offset}[${out}]`,
+        );
+        prev = out;
+      }
+      lastLabel = 'vx';
     }
-    lastLabel = 'vx';
+
+    // ---- grain + vignette finish ----
+    const finish: string[] = [];
+    if (p.vignette > 0.05) {
+      const angle = (Math.PI / 5) * (0.5 + clamp01(p.vignette));
+      finish.push(`vignette=angle=${angle.toFixed(4)}`);
+    }
+    if (p.grain > 0.02) {
+      finish.push(`noise=alls=${Math.round(clamp01(p.grain) * 28)}:allf=t`);
+    }
+    finish.push('format=yuv420p');
+    parts.push(`[${lastLabel}]${finish.join(',')}[vout]`);
+
+    const filtergraph = parts.join(';');
+    const totalDurationSec = round3(n * p.slideDurationSec - (n - 1) * transitionSec);
+
+    const args = [
+      ...inputs,
+      '-filter_complex',
+      filtergraph,
+      '-map',
+      '[vout]',
+      '-an',
+      '-c:v',
+      'libx264',
+      '-pix_fmt',
+      'yuv420p',
+      '-profile:v',
+      'high',
+      '-preset',
+      'veryfast',
+      '-crf',
+      '21',
+      // Cap the bitrate so grain/motion never bloat the file — keeps reels
+      // upload-friendly (~8 Mbps => ~8 MB for a 8s reel, ~30 MB for 30s).
+      '-maxrate',
+      '8M',
+      '-bufsize',
+      '16M',
+      '-r',
+      String(fps),
+      '-movflags',
+      '+faststart',
+      outPath,
+    ];
+
+    log.info(
+      { slides: n, aspect: input.aspect, preset: p.key, durationSec: totalDurationSec },
+      'Composing reel',
+    );
+
+    await runFfmpeg({
+      args,
+      totalDurationSec,
+      label: `reel:${p.key}`,
+      // Generous budget: ~12s of wall-clock per second of output, min 2 min.
+      timeoutMs: Math.max(120_000, Math.round(totalDurationSec * 1000 * 12)),
+    });
+
+    const { size } = fs.statSync(outPath);
+    log.info({ outPath, bytes: size, durationSec: totalDurationSec }, 'Reel composed');
+
+    return {
+      outPath,
+      width: W,
+      height: H,
+      durationSec: totalDurationSec,
+      fps,
+      bytes: size,
+      presetKey: p.key,
+    };
+  } finally {
+    await cleanup();
   }
-
-  // ---- grain + vignette finish ----
-  const finish: string[] = [];
-  if (p.vignette > 0.05) {
-    const angle = (Math.PI / 5) * (0.5 + clamp01(p.vignette));
-    finish.push(`vignette=angle=${angle.toFixed(4)}`);
-  }
-  if (p.grain > 0.02) {
-    finish.push(`noise=alls=${Math.round(clamp01(p.grain) * 28)}:allf=t`);
-  }
-  finish.push('format=yuv420p');
-  parts.push(`[${lastLabel}]${finish.join(',')}[vout]`);
-
-  const filtergraph = parts.join(';');
-  const totalDurationSec = round3(n * p.slideDurationSec - (n - 1) * transitionSec);
-
-  const args = [
-    ...inputs,
-    '-filter_complex',
-    filtergraph,
-    '-map',
-    '[vout]',
-    '-an',
-    '-c:v',
-    'libx264',
-    '-pix_fmt',
-    'yuv420p',
-    '-profile:v',
-    'high',
-    '-preset',
-    'veryfast',
-    '-crf',
-    '21',
-    // Cap the bitrate so grain/motion never bloat the file — keeps reels
-    // upload-friendly (~8 Mbps => ~8 MB for a 8s reel, ~30 MB for 30s).
-    '-maxrate',
-    '8M',
-    '-bufsize',
-    '16M',
-    '-r',
-    String(fps),
-    '-movflags',
-    '+faststart',
-    outPath,
-  ];
-
-  log.info(
-    { slides: n, aspect: input.aspect, preset: p.key, durationSec: totalDurationSec },
-    'Composing reel',
-  );
-
-  await runFfmpeg({
-    args,
-    totalDurationSec,
-    label: `reel:${p.key}`,
-    // Generous budget: ~12s of wall-clock per second of output, min 2 min.
-    timeoutMs: Math.max(120_000, Math.round(totalDurationSec * 1000 * 12)),
-  });
-
-  const { size } = fs.statSync(outPath);
-  log.info({ outPath, bytes: size, durationSec: totalDurationSec }, 'Reel composed');
-
-  return {
-    outPath,
-    width: W,
-    height: H,
-    durationSec: totalDurationSec,
-    fps,
-    bytes: size,
-    presetKey: p.key,
-  };
 }
 
 /**
