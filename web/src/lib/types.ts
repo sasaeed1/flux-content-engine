@@ -214,7 +214,11 @@ export interface MediaAsset {
   analysis: MediaAnalysis;
   overall_score: number | null;
   status: string;
-  metadata: { enhance_applied?: string[]; enhanced_at?: string } | null;
+  metadata: {
+    enhance_applied?: string[];
+    enhanced_at?: string;
+    crops?: Record<string, string>;
+  } | null;
   created_at: string;
 }
 

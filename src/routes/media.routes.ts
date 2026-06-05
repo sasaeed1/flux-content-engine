@@ -16,6 +16,7 @@ import {
   directorVerdict,
   enhanceAsset,
   listAssets,
+  reframeAsset,
   uploadAndAnalyze,
 } from '../modules/media/mediaService';
 
@@ -78,6 +79,19 @@ router.post(
       brandGrade: body.brandGrade === true,
       intensity: typeof body.intensity === 'number' ? body.intensity : undefined,
     });
+    res.json({ asset });
+  }),
+);
+
+router.post(
+  '/tenant/media/:id/reframe',
+  generationRateLimit,
+  asyncHandler(async (req, res) => {
+    const orgId = req.tenant!.organizationId;
+    const aspects = Array.isArray(req.body?.aspects)
+      ? (req.body.aspects as unknown[]).filter((x): x is string => typeof x === 'string')
+      : undefined;
+    const asset = await reframeAsset(orgId, req.params.id, aspects);
     res.json({ asset });
   }),
 );

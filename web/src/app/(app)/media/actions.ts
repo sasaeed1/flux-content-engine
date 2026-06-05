@@ -22,6 +22,12 @@ export async function enhanceMediaAction(
   return res;
 }
 
+export async function reframeMediaAction(id: string, aspects?: string[]) {
+  const res = await api.reframeMedia(id, aspects);
+  revalidatePath('/media');
+  return res;
+}
+
 export async function deleteMediaAction(id: string) {
   const res = await api.deleteMedia(id);
   revalidatePath('/media');

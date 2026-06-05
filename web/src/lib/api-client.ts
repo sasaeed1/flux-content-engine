@@ -340,6 +340,11 @@ export const api = {
       method: 'POST',
       json: body,
     }),
+  reframeMedia: (id: string, aspects?: string[]) =>
+    engineFetch<{ asset: MediaAsset }>(`/api/tenant/media/${id}/reframe`, {
+      method: 'POST',
+      json: { aspects },
+    }),
   deleteMedia: (id: string) =>
     engineFetch<{ ok: true }>(`/api/tenant/media/${id}`, { method: 'DELETE' }),
   mediaDirector: () =>

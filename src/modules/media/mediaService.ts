@@ -17,6 +17,7 @@ import { completeJsonRouted } from '../../ai/router';
 import { loadBrandProfile } from '../brand/brandService';
 import { analyzeImage, type ImageAnalysis } from './imageIntelligence';
 import { enhanceImage } from './imageEnhance';
+import { smartCrop, DEFAULT_REFRAME_KEYS, REFRAME_ASPECTS } from './imageReframe';
 
 const log = childLogger({ module: 'media' });
 
@@ -159,6 +160,44 @@ export async function enhanceAsset(
     .single();
   if (error) throw new ValidationError(error.message);
   log.info({ orgId, id, applied: enhanced.applied }, 'Media enhanced');
+  return data as MediaRow;
+}
+
+export async function reframeAsset(
+  orgId: string,
+  id: string,
+  aspects?: string[],
+): Promise<MediaRow> {
+  const keys = (aspects && aspects.length ? aspects : DEFAULT_REFRAME_KEYS).filter(
+    (k) => k in REFRAME_ASPECTS,
+  );
+  if (keys.length === 0) throw new ValidationError('No valid aspect ratios requested.');
+  const row = await getAsset(orgId, id);
+  const src = row.enhanced_url ?? row.source_url;
+  const res = await fetch(src);
+  if (!res.ok) throw new ExternalApiError('storage', `fetch source failed: ${res.status}`);
+  const buf = Buffer.from(await res.arrayBuffer());
+
+  const crops: Record<string, string> = {};
+  for (const key of keys) {
+    const c = await smartCrop(buf, key);
+    const up = await uploadBuffer({
+      bucket: env.SUPABASE_MEDIA_BUCKET,
+      path: storagePaths.mediaCrop(orgId, id, key),
+      body: c.buffer,
+      contentType: 'image/jpeg',
+    });
+    crops[key] = `${up.publicUrl}?v=${Date.now()}`;
+  }
+  const { data, error } = await supabase
+    .from('media_assets')
+    .update({ metadata: { ...(row.metadata ?? {}), crops } })
+    .eq('organization_id', orgId)
+    .eq('id', id)
+    .select('*')
+    .single();
+  if (error) throw new ValidationError(error.message);
+  log.info({ orgId, id, crops: keys }, 'Media reframed');
   return data as MediaRow;
 }
 

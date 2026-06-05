@@ -74,4 +74,7 @@ export const storagePaths = {
   /** Media Studio — enhanced output. */
   mediaEnhanced: (orgId: string, assetId: string, ext: string): string =>
     `orgs/${orgId}/media/${assetId}/enhanced.${ext}`,
+  /** Media Studio — a smart-reframed crop for a given aspect key. */
+  mediaCrop: (orgId: string, assetId: string, key: string): string =>
+    `orgs/${orgId}/media/${assetId}/crop-${key}.jpg`,
 };

@@ -10,6 +10,7 @@ import { useRef, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import {
+  Crop,
   Download,
   Loader2,
   Sparkles,
@@ -21,6 +22,7 @@ import {
   deleteMediaAction,
   enhanceMediaAction,
   mediaDirectorAction,
+  reframeMediaAction,
   uploadMediaAction,
 } from '@/app/(app)/media/actions';
 import type { DirectorVerdict, MediaAsset } from '@/lib/types';
@@ -30,6 +32,13 @@ function scoreColor(n: number): string {
   if (n >= 55) return '#F5B544';
   return '#F87171';
 }
+
+const CROP_LABEL: Record<string, string> = {
+  square: '1:1',
+  portrait: '4:5',
+  story: '9:16',
+  landscape: '1.91:1',
+};
 
 export function MediaStudio({ assets }: { assets: MediaAsset[] }) {
   const router = useRouter();
@@ -205,6 +214,12 @@ function AssetCard({ asset, rank }: { asset: MediaAsset; rank: number }) {
         /* refresh handles it */
       }
     });
+  const reframe = () =>
+    start(async () => {
+      await reframeMediaAction(asset.id);
+      router.refresh();
+    });
+  const crops = asset.metadata?.crops ?? null;
   const remove = () => {
     if (!confirm('Remove this asset?')) return;
     start(async () => {
@@ -295,16 +310,51 @@ function AssetCard({ asset, rank }: { asset: MediaAsset; rank: number }) {
             <input type="checkbox" checked={grade} onChange={(e) => setGrade(e.target.checked)} className="accent-flux-violet" />
             Brand grade
           </label>
-          <button
-            type="button"
-            onClick={enhance}
-            disabled={pending}
-            className="press ml-auto inline-flex items-center gap-1.5 rounded-sm bg-flux-gradient px-3 py-1.5 text-[12px] font-bold text-flux-ink glow-cta disabled:opacity-50"
-          >
-            {pending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Wand2 className="h-3.5 w-3.5" />}
-            {hasEnhanced ? 'Re-enhance' : 'Enhance'}
-          </button>
+          <div className="ml-auto flex items-center gap-1.5">
+            <button
+              type="button"
+              onClick={reframe}
+              disabled={pending}
+              className="press inline-flex items-center gap-1.5 rounded-sm border border-edge-strong bg-surface-2 px-2.5 py-1.5 text-[12px] font-semibold text-fg transition hover:border-flux-cyan/50 disabled:opacity-50"
+              title="Smart-crop to 1:1, 4:5 and 9:16 — subject-aware"
+            >
+              <Crop className="h-3.5 w-3.5 text-flux-cyan" />
+              Reframe
+            </button>
+            <button
+              type="button"
+              onClick={enhance}
+              disabled={pending}
+              className="press inline-flex items-center gap-1.5 rounded-sm bg-flux-gradient px-3 py-1.5 text-[12px] font-bold text-flux-ink glow-cta disabled:opacity-50"
+            >
+              {pending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Wand2 className="h-3.5 w-3.5" />}
+              {hasEnhanced ? 'Re-enhance' : 'Enhance'}
+            </button>
+          </div>
         </div>
+
+        {crops && Object.keys(crops).length > 0 && (
+          <div className="space-y-1.5">
+            <p className="text-[10px] uppercase tracking-wider text-fg-dim">Smart crops — subject-aware</p>
+            <div className="grid grid-cols-3 gap-1.5">
+              {Object.entries(crops).map(([key, url]) => (
+                <a
+                  key={key}
+                  href={url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="press relative block aspect-square overflow-hidden rounded border border-edge-subtle"
+                  title={`Open ${CROP_LABEL[key] ?? key} crop`}
+                >
+                  <Image src={url} alt={key} fill unoptimized className="object-cover" sizes="120px" />
+                  <span className="absolute inset-x-0 bottom-0 bg-black/60 px-1 py-0.5 text-center text-[9px] font-medium text-white">
+                    {CROP_LABEL[key] ?? key}
+                  </span>
+                </a>
+              ))}
+            </div>
+          </div>
+        )}
 
         <div className="flex items-center gap-3 text-[11px]">
           {hasEnhanced && (
