@@ -24,6 +24,13 @@ export async function generateCampaignTopicsAction(count: number, themeHint?: st
   return res;
 }
 
+/** Generate on-brand topics by analyzing a website URL. */
+export async function generateFromWebsiteAction(url: string, count = 8) {
+  const res = await api.topicsFromWebsite(url, count);
+  revalidatePath('/campaign');
+  return res;
+}
+
 /** Add a single topic on a specific day. */
 export async function addTopicOnDayAction(topic: string, scheduledDate: string) {
   const res = await api.addTopics([{ topic, postType: 'carousel', scheduledDate, priority: 1 }]);
