@@ -198,8 +198,9 @@ export async function generateTopicsFromWebsite(input: {
       post_type: t.post_type,
       scheduled_date: d.toISOString().slice(0, 10),
       priority: input.count - i,
-      source: 'website' as const,
+      source: 'ai' as const,
       status: 'pending' as const,
+      metadata: { origin: 'website', source_host: u.hostname },
     };
   });
   const inserted = await insertTopics(rows);
