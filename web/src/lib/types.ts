@@ -218,6 +218,7 @@ export interface MediaAsset {
     enhance_applied?: string[];
     enhanced_at?: string;
     crops?: Record<string, string>;
+    backgrounds?: Record<string, string>;
   } | null;
   created_at: string;
 }

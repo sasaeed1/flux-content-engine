@@ -28,6 +28,12 @@ export async function reframeMediaAction(id: string, aspects?: string[]) {
   return res;
 }
 
+export async function backgroundMediaAction(id: string, styles?: string[]) {
+  const res = await api.backgroundMedia(id, styles);
+  revalidatePath('/media');
+  return res;
+}
+
 export async function deleteMediaAction(id: string) {
   const res = await api.deleteMedia(id);
   revalidatePath('/media');

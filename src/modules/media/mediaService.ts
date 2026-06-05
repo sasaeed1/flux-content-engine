@@ -18,6 +18,7 @@ import { loadBrandProfile } from '../brand/brandService';
 import { analyzeImage, type ImageAnalysis } from './imageIntelligence';
 import { enhanceImage } from './imageEnhance';
 import { smartCrop, DEFAULT_REFRAME_KEYS, REFRAME_ASPECTS } from './imageReframe';
+import { makeBackground, DEFAULT_BACKGROUND_STYLES, BACKGROUND_STYLES } from './imageBackgrounds';
 
 const log = childLogger({ module: 'media' });
 
@@ -198,6 +199,53 @@ export async function reframeAsset(
     .single();
   if (error) throw new ValidationError(error.message);
   log.info({ orgId, id, crops: keys }, 'Media reframed');
+  return data as MediaRow;
+}
+
+export async function backgroundAsset(
+  orgId: string,
+  id: string,
+  styles?: string[],
+): Promise<MediaRow> {
+  const valid = new Set<string>(BACKGROUND_STYLES);
+  const keys = (styles && styles.length ? styles : DEFAULT_BACKGROUND_STYLES).filter((s) =>
+    valid.has(s),
+  );
+  if (keys.length === 0) throw new ValidationError('No valid background styles requested.');
+  const row = await getAsset(orgId, id);
+  const src = row.enhanced_url ?? row.source_url;
+  const res = await fetch(src);
+  if (!res.ok) throw new ExternalApiError('storage', `fetch source failed: ${res.status}`);
+  const buf = Buffer.from(await res.arrayBuffer());
+
+  let brandColor: string | null = null;
+  try {
+    const brand = await loadBrandProfile(orgId);
+    brandColor = brand.theme.colors.accent ?? null;
+  } catch {
+    /* no brand → duotone falls back to default */
+  }
+
+  const backgrounds: Record<string, string> = {};
+  for (const style of keys) {
+    const bg = await makeBackground(buf, style, brandColor);
+    const up = await uploadBuffer({
+      bucket: env.SUPABASE_MEDIA_BUCKET,
+      path: storagePaths.mediaBackground(orgId, id, style),
+      body: bg.buffer,
+      contentType: 'image/jpeg',
+    });
+    backgrounds[style] = `${up.publicUrl}?v=${Date.now()}`;
+  }
+  const { data, error } = await supabase
+    .from('media_assets')
+    .update({ metadata: { ...(row.metadata ?? {}), backgrounds } })
+    .eq('organization_id', orgId)
+    .eq('id', id)
+    .select('*')
+    .single();
+  if (error) throw new ValidationError(error.message);
+  log.info({ orgId, id, styles: keys }, 'Media backgrounds generated');
   return data as MediaRow;
 }
 

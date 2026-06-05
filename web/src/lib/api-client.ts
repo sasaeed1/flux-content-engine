@@ -345,6 +345,11 @@ export const api = {
       method: 'POST',
       json: { aspects },
     }),
+  backgroundMedia: (id: string, styles?: string[]) =>
+    engineFetch<{ asset: MediaAsset }>(`/api/tenant/media/${id}/backgrounds`, {
+      method: 'POST',
+      json: { styles },
+    }),
   deleteMedia: (id: string) =>
     engineFetch<{ ok: true }>(`/api/tenant/media/${id}`, { method: 'DELETE' }),
   mediaDirector: () =>

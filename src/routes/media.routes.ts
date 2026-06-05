@@ -12,6 +12,7 @@ import { asyncHandler, requireTenant } from '../middleware';
 import { generationRateLimit } from '../lib/rateLimit';
 import { ValidationError } from '../lib/errors';
 import {
+  backgroundAsset,
   deleteAsset,
   directorVerdict,
   enhanceAsset,
@@ -92,6 +93,19 @@ router.post(
       ? (req.body.aspects as unknown[]).filter((x): x is string => typeof x === 'string')
       : undefined;
     const asset = await reframeAsset(orgId, req.params.id, aspects);
+    res.json({ asset });
+  }),
+);
+
+router.post(
+  '/tenant/media/:id/backgrounds',
+  generationRateLimit,
+  asyncHandler(async (req, res) => {
+    const orgId = req.tenant!.organizationId;
+    const styles = Array.isArray(req.body?.styles)
+      ? (req.body.styles as unknown[]).filter((x): x is string => typeof x === 'string')
+      : undefined;
+    const asset = await backgroundAsset(orgId, req.params.id, styles);
     res.json({ asset });
   }),
 );

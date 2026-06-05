@@ -12,6 +12,7 @@ import Image from 'next/image';
 import {
   Crop,
   Download,
+  Layers,
   Loader2,
   Sparkles,
   Trash2,
@@ -19,6 +20,7 @@ import {
   Wand2,
 } from 'lucide-react';
 import {
+  backgroundMediaAction,
   deleteMediaAction,
   enhanceMediaAction,
   mediaDirectorAction,
@@ -38,6 +40,12 @@ const CROP_LABEL: Record<string, string> = {
   portrait: '4:5',
   story: '9:16',
   landscape: '1.91:1',
+};
+
+const BG_LABEL: Record<string, string> = {
+  scrim: 'Scrim',
+  frost: 'Frost',
+  duotone: 'Duotone',
 };
 
 export function MediaStudio({ assets }: { assets: MediaAsset[] }) {
@@ -219,7 +227,13 @@ function AssetCard({ asset, rank }: { asset: MediaAsset; rank: number }) {
       await reframeMediaAction(asset.id);
       router.refresh();
     });
+  const makeBackgrounds = () =>
+    start(async () => {
+      await backgroundMediaAction(asset.id);
+      router.refresh();
+    });
   const crops = asset.metadata?.crops ?? null;
+  const backgrounds = asset.metadata?.backgrounds ?? null;
   const remove = () => {
     if (!confirm('Remove this asset?')) return;
     start(async () => {
@@ -310,7 +324,17 @@ function AssetCard({ asset, rank }: { asset: MediaAsset; rank: number }) {
             <input type="checkbox" checked={grade} onChange={(e) => setGrade(e.target.checked)} className="accent-flux-violet" />
             Brand grade
           </label>
-          <div className="ml-auto flex items-center gap-1.5">
+          <div className="ml-auto flex flex-wrap items-center gap-1.5">
+            <button
+              type="button"
+              onClick={makeBackgrounds}
+              disabled={pending}
+              className="press inline-flex items-center gap-1.5 rounded-sm border border-edge-strong bg-surface-2 px-2.5 py-1.5 text-[12px] font-semibold text-fg transition hover:border-flux-violet/50 disabled:opacity-50"
+              title="Generate text-ready slide backgrounds (scrim / frost / duotone)"
+            >
+              <Layers className="h-3.5 w-3.5 text-flux-violet-bright" />
+              Backgrounds
+            </button>
             <button
               type="button"
               onClick={reframe}
@@ -349,6 +373,31 @@ function AssetCard({ asset, rank }: { asset: MediaAsset; rank: number }) {
                   <Image src={url} alt={key} fill unoptimized className="object-cover" sizes="120px" />
                   <span className="absolute inset-x-0 bottom-0 bg-black/60 px-1 py-0.5 text-center text-[9px] font-medium text-white">
                     {CROP_LABEL[key] ?? key}
+                  </span>
+                </a>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {backgrounds && Object.keys(backgrounds).length > 0 && (
+          <div className="space-y-1.5">
+            <p className="text-[10px] uppercase tracking-wider text-fg-dim">
+              Slide backgrounds — text-ready
+            </p>
+            <div className="grid grid-cols-3 gap-1.5">
+              {Object.entries(backgrounds).map(([key, url]) => (
+                <a
+                  key={key}
+                  href={url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="press relative block aspect-[4/5] overflow-hidden rounded border border-edge-subtle"
+                  title={`Open ${BG_LABEL[key] ?? key} background`}
+                >
+                  <Image src={url} alt={key} fill unoptimized className="object-cover" sizes="120px" />
+                  <span className="absolute inset-x-0 bottom-0 bg-black/50 px-1 py-0.5 text-center text-[9px] font-medium text-white">
+                    {BG_LABEL[key] ?? key}
                   </span>
                 </a>
               ))}
