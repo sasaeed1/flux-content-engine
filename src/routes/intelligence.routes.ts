@@ -208,7 +208,7 @@ const clusterResponseSchema = z.object({
 });
 
 router.post(
-  '/tenant/topics/cluster',
+  '/tenant/intelligence/topics/cluster',
   generationRateLimit,
   asyncHandler(async (req, res) => {
     const orgId = req.tenant!.organizationId;
