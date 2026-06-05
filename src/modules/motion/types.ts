@@ -59,6 +59,11 @@ export interface MotionPreset {
   grain: number;
   /** 0..1 — vignette strength. */
   vignette: number;
+  /** 0..1 — cinematic colour grade (contrast + saturation + teal/orange cast).
+   *  Defaults to a subtle 0.5 in the composer when omitted. */
+  grade?: number;
+  /** 0..1 — filmic motion blur (frame blending over the Ken Burns move). 0 = off. */
+  motionBlur?: number;
   /** Output frame rate. 30 is plenty for slide motion; keeps files small. */
   fps: number;
 }

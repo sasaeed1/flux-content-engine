@@ -5,8 +5,10 @@ import {
   Calendar,
   CheckCheck,
   CheckCircle2,
+  Compass,
   ExternalLink,
   FileText,
+  Film,
   Layers,
   Palette,
   Pencil,
@@ -343,6 +345,56 @@ export default function HomePage() {
             >
               <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-flux-soft">
                 <f.icon className="h-5 w-5 text-primary" />
+              </div>
+              <h3 className="mt-4 text-base font-semibold">{f.title}</h3>
+              <p className="mt-2 text-sm text-muted-foreground">{f.body}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* Beyond carousels — the newer pillars */}
+      <section className="relative mx-auto mt-24 max-w-7xl px-4 sm:mt-32 sm:px-6">
+        <div className="text-center">
+          <Badge variant="outline">More than carousels</Badge>
+          <h2 className="mt-5 text-3xl font-semibold tracking-tight sm:text-5xl">
+            A whole <GradientText>content studio</GradientText>, not a generator.
+          </h2>
+          <p className="mx-auto mt-4 max-w-2xl text-sm text-muted-foreground sm:text-base">
+            Carousels are the start. Flux also plans your month, animates your slides into
+            cinematic reels, and learns what your audience actually wants.
+          </p>
+        </div>
+
+        <div className="mt-14 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {[
+            {
+              icon: Film,
+              title: 'Cinematic reels',
+              body: 'Turn any carousel into a 9:16 MP4 — Ken Burns motion, crossfades, film grain, and an animated kinetic hook. Renders locally, zero API cost.',
+            },
+            {
+              icon: Calendar,
+              title: 'Plan the month',
+              body: 'A campaign calendar that generates on-brand topics, schedules them across days, and forges a finished post for each — in one click.',
+            },
+            {
+              icon: Layers,
+              title: '40 style modes',
+              body: 'Every look is a full personality — type, palette, motion, effects. From Cinematic Movie Poster to Brutalist Editorial. Browse, preview, apply.',
+            },
+            {
+              icon: Compass,
+              title: 'Topic intelligence',
+              body: 'Paste your site and Flux proposes on-brand ideas, scores them for virality, and clusters them into the content pillars that carry your feed.',
+            },
+          ].map((f) => (
+            <div
+              key={f.title}
+              className="rounded-2xl glass p-5 transition hover:-translate-y-0.5 hover:border-primary/40"
+            >
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-flux-gradient">
+                <f.icon className="h-5 w-5 text-background" />
               </div>
               <h3 className="mt-4 text-base font-semibold">{f.title}</h3>
               <p className="mt-2 text-sm text-muted-foreground">{f.body}</p>

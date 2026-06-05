@@ -122,8 +122,31 @@ export async function composeReel(input: ReelRenderInput): Promise<ReelRenderRes
       lastLabel = 'vx';
     }
 
-    // ---- grain + vignette finish ----
+    // ---- cinematic finish: motion-blur -> grade -> vignette -> grain ----
     const finish: string[] = [];
+
+    // Filmic motion blur — blend consecutive frames so the Ken Burns move gains a
+    // subtle shutter smear. tmix is single-pass and cheap; 0 = off.
+    const mblur = clamp01(p.motionBlur ?? 0);
+    if (mblur > 0.02) {
+      const fr = 2 + Math.round(mblur * 2); // 2..4 frames
+      finish.push(`tmix=frames=${fr}:weights=${'1 '.repeat(fr).trim()}`);
+    }
+
+    // Cinematic colour grade — gentle contrast + saturation, slight gamma lift,
+    // and a teal-shadow / warm-highlight cast (the classic filmic look). Subtle
+    // by default (0.5) so every reel gains depth without looking over-processed.
+    const grade = clamp01(p.grade ?? 0.5);
+    if (grade > 0.02) {
+      const contrast = (1 + 0.18 * grade).toFixed(3);
+      const sat = (1 + 0.22 * grade).toFixed(3);
+      const gamma = (1 - 0.05 * grade).toFixed(3);
+      finish.push(`eq=contrast=${contrast}:saturation=${sat}:gamma=${gamma}`);
+      const cool = (0.05 * grade).toFixed(3); // shadows toward teal/blue
+      const warm = 0.04 * grade; // highlights toward warm
+      finish.push(`colorbalance=bs=${cool}:rh=${warm.toFixed(3)}:bh=${(-warm).toFixed(3)}`);
+    }
+
     if (p.vignette > 0.05) {
       const angle = (Math.PI / 5) * (0.5 + clamp01(p.vignette));
       finish.push(`vignette=angle=${angle.toFixed(4)}`);

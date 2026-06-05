@@ -2,6 +2,7 @@ import { CalendarRange } from 'lucide-react';
 import { PageHeader } from '@/components/flux/page-header';
 import { CampaignCalendar, type CampaignTopic } from '@/components/campaign/campaign-calendar';
 import { WebsiteTopics } from '@/components/campaign/website-topics';
+import { TopicClusters } from '@/components/campaign/topic-clusters';
 import { api } from '@/lib/api-client';
 
 export const dynamic = 'force-dynamic';
@@ -70,6 +71,8 @@ export default async function CampaignPage({
       )}
 
       <WebsiteTopics />
+
+      {topics.length > 0 && <TopicClusters />}
 
       {topics.length === 0 && !error ? (
         <div className="solid-card rounded-2xl p-12 text-center pattern-dots">

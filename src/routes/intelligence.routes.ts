@@ -191,6 +191,83 @@ router.post(
 );
 
 /* ============================================================
+ *  /topics/cluster — group the org's topics into content pillars.
+ * ============================================================ */
+
+const clusterResponseSchema = z.object({
+  clusters: z
+    .array(
+      z.object({
+        label: z.string().min(2).max(60),
+        summary: z.string().max(220),
+        topics: z.array(z.string()).min(1),
+      }),
+    )
+    .min(1)
+    .max(8),
+});
+
+router.post(
+  '/tenant/topics/cluster',
+  generationRateLimit,
+  asyncHandler(async (req, res) => {
+    const orgId = req.tenant!.organizationId;
+    const { data, error } = await supabase
+      .from('content_topics')
+      .select('id, topic, status')
+      .eq('organization_id', orgId)
+      .order('created_at', { ascending: false })
+      .limit(60);
+    if (error) throw new ValidationError(error.message);
+    const rows = (data ?? []) as Array<{ id: string; topic: string; status: string }>;
+    if (rows.length < 3) {
+      res.json({ clusters: [], message: 'Add at least 3 topics to find content pillars.' });
+      return;
+    }
+
+    const brand = await loadBrandProfile(orgId);
+    const list = rows.map((r, i) => `${i + 1}. ${r.topic}`).join('\n');
+    const system = [
+      'You are a senior content strategist. Group a brand\'s topic ideas into 3-6',
+      'coherent "content pillars" — the recurring themes that carry a feed.',
+      'Every topic belongs to exactly ONE pillar. Reuse the EXACT topic titles given.',
+      'Give each pillar a short punchy label (2-4 words) and a one-line summary of',
+      'why it matters to this audience.',
+    ].join('\n');
+    const user = [
+      `Brand: ${brand.name}${brand.niche ? ` — ${brand.niche}` : ''}.`,
+      '',
+      'Topics:',
+      list,
+      '',
+      'Return JSON: { "clusters": [ { "label": string, "summary": string, "topics": [exact topic titles] } ] }',
+    ].join('\n');
+
+    const result = await completeJsonRouted(
+      { system, user, schema: clusterResponseSchema, temperature: 0.3, maxTokens: 1800 },
+      { tier: 'balanced', cacheEnabled: false },
+    );
+
+    // Map titles back to ids (best-effort) so the UI can deep-link; keep counts honest.
+    const byTitle = new Map(rows.map((r) => [r.topic.trim().toLowerCase(), r.id]));
+    const clusters = result.clusters
+      .map((c) => ({
+        label: c.label,
+        summary: c.summary,
+        count: c.topics.length,
+        topics: c.topics.slice(0, 10),
+        topicIds: c.topics
+          .map((t) => byTitle.get(t.trim().toLowerCase()))
+          .filter((x): x is string => Boolean(x)),
+      }))
+      .filter((c) => c.topics.length > 0);
+
+    log.info({ orgId, clusters: clusters.length, topics: rows.length }, 'topics clustered');
+    res.json({ clusters });
+  }),
+);
+
+/* ============================================================
  *  /insights — AI cards for the Dashboard + Library.
  *  Reads cached cards from the ai_insights table, refreshes if stale.
  * ============================================================ */

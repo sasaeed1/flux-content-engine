@@ -27,6 +27,8 @@ const BASE: Record<MotionPhilosophy, Omit<MotionPreset, 'key' | 'name' | 'descri
     zoomIntensity: 0.12,
     grain: 0.05,
     vignette: 0.25,
+    grade: 0.35,
+    motionBlur: 0.0,
     fps: 30,
   },
   subtle: {
@@ -37,6 +39,8 @@ const BASE: Record<MotionPhilosophy, Omit<MotionPreset, 'key' | 'name' | 'descri
     zoomIntensity: 0.2,
     grain: 0.08,
     vignette: 0.3,
+    grade: 0.45,
+    motionBlur: 0.15,
     fps: 30,
   },
   dynamic: {
@@ -47,6 +51,8 @@ const BASE: Record<MotionPhilosophy, Omit<MotionPreset, 'key' | 'name' | 'descri
     zoomIntensity: 0.32,
     grain: 0.1,
     vignette: 0.28,
+    grade: 0.55,
+    motionBlur: 0.3,
     fps: 30,
   },
   cinematic: {
@@ -57,6 +63,8 @@ const BASE: Record<MotionPhilosophy, Omit<MotionPreset, 'key' | 'name' | 'descri
     zoomIntensity: 0.28,
     grain: 0.16,
     vignette: 0.4,
+    grade: 0.7,
+    motionBlur: 0.35,
     fps: 30,
   },
   kinetic: {
@@ -67,6 +75,8 @@ const BASE: Record<MotionPhilosophy, Omit<MotionPreset, 'key' | 'name' | 'descri
     zoomIntensity: 0.45,
     grain: 0.12,
     vignette: 0.22,
+    grade: 0.6,
+    motionBlur: 0.5,
     fps: 30,
   },
 };
@@ -106,6 +116,8 @@ export function presetForStyleMotion(
     zoomIntensity: round2(clamp01(base.zoomIntensity * (0.7 + t * 0.6))),
     grain: round2(clamp01(base.grain * (0.8 + t * 0.5))),
     vignette: base.vignette,
+    grade: round2(clamp01((base.grade ?? 0.5) * (0.85 + t * 0.3))),
+    motionBlur: round2(clamp01((base.motionBlur ?? 0) * (0.7 + t * 0.6))),
     fps: base.fps,
   };
 }

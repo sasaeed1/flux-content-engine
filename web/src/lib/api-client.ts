@@ -151,6 +151,17 @@ export const api = {
       method: 'POST',
       json: { url, count },
     }),
+  clusterTopics: () =>
+    engineFetch<{
+      clusters: Array<{
+        label: string;
+        summary: string;
+        count: number;
+        topics: string[];
+        topicIds: string[];
+      }>;
+      message?: string;
+    }>('/api/tenant/intelligence/topics/cluster', { method: 'POST', json: {} }),
 
   runPipeline: (body: {
     topicId?: string;

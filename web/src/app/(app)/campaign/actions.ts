@@ -31,6 +31,11 @@ export async function generateFromWebsiteAction(url: string, count = 8) {
   return res;
 }
 
+/** Group the current topic queue into AI content pillars (read-only analysis). */
+export async function clusterTopicsAction() {
+  return api.clusterTopics();
+}
+
 /** Add a single topic on a specific day. */
 export async function addTopicOnDayAction(topic: string, scheduledDate: string) {
   const res = await api.addTopics([{ topic, postType: 'carousel', scheduledDate, priority: 1 }]);
