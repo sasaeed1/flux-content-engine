@@ -127,21 +127,31 @@ async function resolveThemePresetKey(
  * jsonb (merging with existing metadata on update). Personality scales live in
  * metadata since brand_profiles has no dedicated column.
  */
-async function withPersonalityMetadata(
+async function withBrandMetadata(
   orgId: string,
   brandId: string | null,
   body: Record<string, unknown>,
 ): Promise<Record<string, unknown>> {
-  if (!('personality' in body) || !body.personality) return body;
+  const hasPersonality = 'personality' in body && !!body.personality;
+  const hasWebsite = 'website' in body;
+  // Neither field belongs to a brand_profiles column — both live in metadata
+  // jsonb. If neither is present, pass the body through untouched.
+  if (!hasPersonality && !hasWebsite) return body;
   const next = { ...body };
   const personality = next.personality;
+  const website =
+    typeof next.website === 'string' ? next.website.trim() || null : null;
   delete next.personality;
+  delete next.website;
   let existingMeta: Record<string, unknown> = {};
   if (brandId) {
     const existing = await getBrandById(orgId, brandId);
     existingMeta = (existing?.metadata as Record<string, unknown>) ?? {};
   }
-  next.metadata = { ...existingMeta, personality };
+  const metadata: Record<string, unknown> = { ...existingMeta };
+  if (hasPersonality) metadata.personality = personality;
+  if (hasWebsite) metadata.website = website;
+  next.metadata = metadata;
   return next;
 }
 
@@ -153,7 +163,7 @@ router.post(
     if (!body.name || typeof body.name !== 'string') {
       throw new ValidationError('Field "name" is required');
     }
-    const resolved = await withPersonalityMetadata(orgId, null, await resolveThemePresetKey(body));
+    const resolved = await withBrandMetadata(orgId, null, await resolveThemePresetKey(body));
     const row = await createBrand({
       ...(resolved as Partial<BrandProfileRow>),
       organization_id: orgId,
@@ -166,7 +176,7 @@ router.patch(
   '/tenant/brand/:id',
   asyncHandler(async (req, res) => {
     const orgId = req.tenant!.organizationId;
-    const resolved = await withPersonalityMetadata(
+    const resolved = await withBrandMetadata(
       orgId,
       req.params.id,
       await resolveThemePresetKey((req.body ?? {}) as Record<string, unknown>),

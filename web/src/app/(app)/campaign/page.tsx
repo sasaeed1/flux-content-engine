@@ -25,8 +25,12 @@ export default async function CampaignPage({
   const { year, month } = parseYm(ym);
 
   // Load the visible month plus a little padding, plus any unscheduled topics.
+  // Use the real last day of the month — hardcoding "31" produced invalid dates
+  // like "2026-06-31" (June has 30 days), which made the engine throw
+  // "date/time field value out of range" on every 30-day month and February.
+  const lastDay = new Date(year, month + 1, 0).getDate();
   const from = `${year}-${String(month + 1).padStart(2, '0')}-01`;
-  const to = `${year}-${String(month + 1).padStart(2, '0')}-31`;
+  const to = `${year}-${String(month + 1).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
 
   let topics: CampaignTopic[] = [];
   let error: string | null = null;

@@ -76,6 +76,8 @@ export interface BrandProfile {
   postStyle: string | null;
   ctaStyle: string | null;
   logoUrl: string | null;
+  /** Canonical brand website — grounds default topic generation. Stored in metadata. */
+  website: string | null;
   voiceKeywords: string[];
   voiceAvoid: string[];
   personality?: BrandPersonality;

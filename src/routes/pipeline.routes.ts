@@ -263,7 +263,12 @@ async function loadPostScoped(orgId: string, id: string) {
 
 router.post(
   '/tenant/carousels/:id/approve',
-  asyncHandler(async (req, res) => {
+  asyncHandler(async (req, res, next) => {
+    // "bulk" is a reserved path segment, not a carousel id — fall through to the
+    // /tenant/carousels/bulk/approve handler in edit.routes (mounted after this
+    // router). Without this guard, ":id" greedily captures "bulk" and the load
+    // fails with "invalid input syntax for type uuid: bulk".
+    if (req.params.id === 'bulk') return next();
     const orgId = req.tenant!.organizationId;
     const row = await loadCarouselScoped(orgId, req.params.id);
     if (!row) throw new NotFoundError(`Carousel ${req.params.id} not found`);

@@ -11,13 +11,12 @@
  * The visual feels cinematic — gradient gradient ring, active mode glows.
  */
 import { useEffect, useState, useTransition } from 'react';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import {
   Activity,
   Calendar,
   ChevronDown,
   Film,
-  Layers,
   Sparkles,
   Wand2,
 } from 'lucide-react';
@@ -60,6 +59,28 @@ export const WORKSPACE_MODES = [
   },
 ];
 
+/** Each mode owns a primary workspace surface. Selecting a mode jumps there —
+ *  so a mode switch is a *visible* change of posture, not just an accent recolor. */
+const MODE_ROUTES: Record<string, string> = {
+  creator: '/forge',
+  campaign: '/campaign',
+  motion: '/motion',
+  strategy: '/home',
+  analytics: '/signals',
+};
+
+/** Reverse map: the current route tells us which mode we're actually in, so the
+ *  switcher always reflects where you are (falling back to the persisted choice
+ *  on mode-neutral pages like Library / Brand / Settings). */
+function pathToMode(pathname: string): string | null {
+  if (pathname.startsWith('/forge')) return 'creator';
+  if (pathname.startsWith('/campaign')) return 'campaign';
+  if (pathname.startsWith('/motion')) return 'motion';
+  if (pathname.startsWith('/signals')) return 'analytics';
+  if (pathname.startsWith('/home')) return 'strategy';
+  return null;
+}
+
 interface Props {
   initialMode: string;
   setMode: (mode: string) => Promise<{ ok: true; mode: string }>;
@@ -70,18 +91,25 @@ interface Props {
 
 export function WorkspaceModeSwitcher({ initialMode, setMode, getMode }: Props) {
   const router = useRouter();
+  const pathname = usePathname();
   const [open, setOpen] = useState(false);
-  const [active, setActive] = useState(initialMode || 'creator');
+  const [persisted, setPersisted] = useState(initialMode || 'creator');
   const [pending, start] = useTransition();
 
-  // Hydrate the real mode after mount. Non-blocking — if the engine is
+  // Active mode = where you ARE (route-derived) first, else your persisted
+  // choice. This keeps the switcher truthful: navigate to Motion and it reads
+  // "Motion"; sit on a neutral page and it remembers your last pick.
+  const routeMode = pathToMode(pathname);
+  const active = routeMode ?? persisted;
+
+  // Hydrate the persisted mode after mount. Non-blocking — if the engine is
   // slow, the user sees the default and gets the right value when it lands.
   useEffect(() => {
     if (!getMode) return;
     let alive = true;
     void getMode()
       .then((m) => {
-        if (alive && m) setActive(m);
+        if (alive && m) setPersisted(m);
       })
       .catch(() => {
         /* keep default */
@@ -126,20 +154,20 @@ export function WorkspaceModeSwitcher({ initialMode, setMode, getMode }: Props) 
   }, [active]);
 
   const pick = (key: string) => {
-    if (key === active) {
-      setOpen(false);
-      return;
-    }
-    setActive(key);
     setOpen(false);
+    // Remember the choice (so neutral pages still reflect it) and persist it
+    // server-side in the background — but the headline effect is navigation:
+    // jump to the mode's home so the whole workspace visibly changes.
+    setPersisted(key);
     start(async () => {
       try {
         await setMode(key);
-        router.refresh();
       } catch {
-        /* revert silently — UI is optimistic */
+        /* persist failure is non-fatal — navigation still happens */
       }
     });
+    const dest = MODE_ROUTES[key] ?? '/home';
+    if (pathname !== dest) router.push(dest);
   };
 
   return (

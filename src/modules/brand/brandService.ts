@@ -35,6 +35,12 @@ function readPersonality(metadata: Json | null | undefined): BrandPersonality | 
   };
 }
 
+/** Read the brand's canonical website from metadata jsonb (or null). */
+function readWebsite(metadata: Json | null | undefined): string | null {
+  const w = (metadata as { website?: unknown } | null)?.website;
+  return typeof w === 'string' && w.trim().length > 0 ? w.trim() : null;
+}
+
 const log = childLogger({ module: 'brand' });
 
 const DEFAULT_COLORS: BrandColors = {
@@ -96,6 +102,7 @@ function rowToProfile(brand: BrandProfileRow, theme: BrandTheme): BrandProfile {
     postStyle: brand.post_style,
     ctaStyle: brand.cta_style,
     logoUrl: brand.logo_url,
+    website: readWebsite(brand.metadata),
     voiceKeywords: brand.voice_keywords ?? [],
     voiceAvoid: brand.voice_avoid ?? [],
     personality: readPersonality(brand.metadata),
@@ -150,6 +157,7 @@ function buildNeutralBrandProfile(orgId: string): BrandProfile {
     postStyle: 'educational',
     ctaStyle: 'follow for more',
     logoUrl: null,
+    website: null,
     voiceKeywords: [],
     voiceAvoid: [],
     theme: {

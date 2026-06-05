@@ -12,7 +12,7 @@ export const metadata = { title: 'Library' };
 const FILTERS: Array<{ key: string; label: string; match: (s: string) => boolean }> = [
   { key: 'all', label: 'All', match: () => true },
   { key: 'ready', label: 'Ready', match: (s) => ['ready', 'ready_for_review', 'pending_approval'].includes(s) },
-  { key: 'pending', label: 'Pending', match: (s) => ['draft', 'pending'].includes(s) },
+  { key: 'drafts', label: 'Drafts', match: (s) => ['draft', 'pending'].includes(s) },
   { key: 'scheduled', label: 'Scheduled', match: (s) => ['approved', 'scheduled', 'publishing'].includes(s) },
   { key: 'published', label: 'Published', match: (s) => s === 'published' },
 ];

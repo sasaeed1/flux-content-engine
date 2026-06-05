@@ -301,7 +301,7 @@ create table if not exists generated_carousels (
   slides              jsonb not null default '[]'::jsonb,   -- array of slide content + image refs
   slide_count         integer not null default 0,
   status              text not null default 'ready'
-                        check (status in ('ready','approved','rejected','published','superseded')),
+                        check (status in ('draft','ready','approved','rejected','published','superseded')),
   approved_by         uuid references users(id) on delete set null,
   approved_at         timestamptz,
   metadata            jsonb not null default '{}'::jsonb,

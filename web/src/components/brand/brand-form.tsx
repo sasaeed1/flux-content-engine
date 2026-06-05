@@ -42,6 +42,7 @@ export function BrandForm({ brand, themes }: Props) {
   const [form, setForm] = useState({
     name: brand?.name ?? PLACEHOLDER.name,
     niche: brand?.niche ?? PLACEHOLDER.niche,
+    website: brand?.website ?? '',
     businessType: brand?.businessType ?? PLACEHOLDER.businessType,
     tone: brand?.tone ?? PLACEHOLDER.tone,
     ctaStyle: brand?.ctaStyle ?? PLACEHOLDER.ctaStyle,
@@ -77,6 +78,7 @@ export function BrandForm({ brand, themes }: Props) {
           .map((s) => s.trim())
           .filter(Boolean),
         themePresetKey: form.themePresetKey.trim() || null,
+        website: form.website.trim() || null,
         personality,
       };
       try {
@@ -144,6 +146,17 @@ export function BrandForm({ brand, themes }: Props) {
               onChange={(e) =>
                 setForm((f) => ({ ...f, businessType: e.target.value }))
               }
+            />
+          </Field>
+          <Field
+            label="Website"
+            hint="Flux reads this to ground topic ideas in what you actually do. Used by default when you generate topics."
+          >
+            <Input
+              type="url"
+              placeholder="https://yourbrand.com"
+              value={form.website}
+              onChange={(e) => setForm((f) => ({ ...f, website: e.target.value }))}
             />
           </Field>
         </Section>

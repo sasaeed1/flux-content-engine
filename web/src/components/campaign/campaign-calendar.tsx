@@ -153,19 +153,26 @@ export function CampaignCalendar({
   };
 
   const pendingCount = topics.filter((t) => t.status === 'pending').length;
-  const [batchNote, setBatchNote] = useState<string | null>(null);
+  const [batchNote, setBatchNote] = useState<
+    { kind: 'forging'; queued: number } | { kind: 'empty'; message: string } | null
+  >(null);
   const forgeMonth = () => {
     const done = beginEngineTask('Forging your month of content');
     start(async () => {
       try {
         const res = await forgeTheMonthAction(Math.min(12, pendingCount || 8));
-        setBatchNote(
-          res.queued > 0
-            ? `Forging ${res.queued} carousels in the background — drafts will appear in your Library.`
-            : res.message ?? 'Nothing to forge yet.',
-        );
-        reportEngineActivity(`Started forging ${res.queued} carousels`);
-        setTimeout(() => router.refresh(), 1500);
+        if (res.queued > 0) {
+          setBatchNote({ kind: 'forging', queued: res.queued });
+          reportEngineActivity(`Started forging ${res.queued} carousels`);
+          // The batch runs sequentially in the background (~10-30s each). Poll a
+          // few times so topics visibly flip pending → processing → generated and
+          // the new drafts surface, instead of the calendar looking frozen.
+          [3000, 8000, 16000, 28000, 45000].forEach((ms) =>
+            setTimeout(() => router.refresh(), ms),
+          );
+        } else {
+          setBatchNote({ kind: 'empty', message: res.message ?? 'Nothing to forge yet.' });
+        }
       } finally {
         done();
       }
@@ -224,8 +231,24 @@ export function CampaignCalendar({
       </div>
 
       {batchNote && (
-        <div className="rounded-sm border border-flux-violet/30 bg-flux-violet/[0.06] px-3 py-2 text-[13px] text-flux-violet-bright">
-          {batchNote}
+        <div className="flex items-center gap-2 rounded-sm border border-flux-violet/30 bg-flux-violet/[0.06] px-3 py-2 text-[13px] text-flux-violet-bright">
+          {batchNote.kind === 'forging' ? (
+            <>
+              <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin" />
+              <span>
+                Forging {batchNote.queued} {batchNote.queued === 1 ? 'carousel' : 'carousels'} in the
+                background — each lands as a draft (watch the topics flip to “generated”).
+              </span>
+              <Link
+                href="/library?status=drafts"
+                className="press ml-auto shrink-0 rounded-sm border border-flux-violet/40 px-2 py-1 text-[12px] font-semibold hover:bg-flux-violet/15"
+              >
+                View drafts →
+              </Link>
+            </>
+          ) : (
+            <span>{batchNote.message}</span>
+          )}
         </div>
       )}
 

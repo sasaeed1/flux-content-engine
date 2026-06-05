@@ -74,10 +74,31 @@ export async function generateAndInsertTopics(input: {
   themeHint?: string;
 }): Promise<ContentTopicRow[]> {
   const llmCtx = ctxFromOrg(input.organization);
+
+  // Default behaviour (no explicit theme): ground ideas in the brand's own
+  // website (best-effort) and always lean toward timely, trend-aware angles —
+  // so "Generate topics" reflects what the brand actually does + what's current.
+  let themeHint = input.themeHint;
+  if (!themeHint) {
+    let siteText: string | null = null;
+    if (input.brand.website) siteText = await fetchSiteTextSafe(input.brand.website);
+    if (siteText) {
+      themeHint =
+        "Ground these topics in THIS brand's real website content below — turn their " +
+        'actual offerings, value props, and language into content ideas. Also weave in ' +
+        'timely, trending angles relevant to their niche right now.\n' +
+        `"""\n${siteText}\n"""`;
+    } else {
+      themeHint =
+        "Mix evergreen pillars with timely, trend-aware angles relevant to the brand's " +
+        'niche right now (recent shifts, seasonal moments, current conversations).';
+    }
+  }
+
   const { system, user } = buildTopicGenerationPrompt({
     brand: input.brand,
     count: input.count,
-    themeHint: input.themeHint,
+    themeHint,
   });
 
   const out = await completeJson(
@@ -130,6 +151,59 @@ function extractText(html: string): string {
 }
 
 /**
+ * Fetch a URL and return its readable text + hostname. Strict: throws on any
+ * problem (bad URL, blocked host, non-200, timeout, too little text). Used by
+ * the explicit "analyze this URL" flow where the user expects clear errors.
+ */
+async function fetchSiteTextStrict(rawUrl: string): Promise<{ text: string; hostname: string }> {
+  let u: URL;
+  try {
+    u = new URL(rawUrl);
+  } catch {
+    throw new ValidationError('Invalid URL');
+  }
+  if (!/^https?:$/.test(u.protocol)) throw new ValidationError('URL must start with http(s)://');
+  if (PRIVATE_HOST.test(u.hostname)) throw new ValidationError('That host is not allowed');
+
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 15_000);
+  try {
+    const res = await fetch(u.toString(), {
+      signal: ctrl.signal,
+      headers: { 'user-agent': 'FluxBot/1.0 (+content-engine)' },
+      redirect: 'follow',
+    });
+    if (!res.ok) throw new ExternalApiError('website', `fetch returned ${res.status}`);
+    const html = await res.text();
+    const text = extractText(html);
+    if (text.length < 80) {
+      throw new ValidationError('Could not extract enough readable content from that page');
+    }
+    return { text, hostname: u.hostname };
+  } catch (err) {
+    if ((err as Error).name === 'AbortError') {
+      throw new ExternalApiError('website', 'fetch timed out');
+    }
+    throw err;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/**
+ * Best-effort variant — returns null on ANY failure. Used to ground default
+ * topic generation on the brand's saved website without ever failing the
+ * request when the site is slow/unreachable.
+ */
+export async function fetchSiteTextSafe(rawUrl: string): Promise<string | null> {
+  try {
+    return (await fetchSiteTextStrict(rawUrl)).text;
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Fetch a URL, extract its readable text, and AI-generate on-brand topics from
  * what the brand actually does/sells. Inserts them as pending topics.
  */
@@ -140,39 +214,7 @@ export async function generateTopicsFromWebsite(input: {
   count: number;
   calendarId?: string;
 }): Promise<ContentTopicRow[]> {
-  let u: URL;
-  try {
-    u = new URL(input.url);
-  } catch {
-    throw new ValidationError('Invalid URL');
-  }
-  if (!/^https?:$/.test(u.protocol)) throw new ValidationError('URL must start with http(s)://');
-  if (PRIVATE_HOST.test(u.hostname)) throw new ValidationError('That host is not allowed');
-
-  const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), 15_000);
-  let html: string;
-  try {
-    const res = await fetch(u.toString(), {
-      signal: ctrl.signal,
-      headers: { 'user-agent': 'FluxBot/1.0 (+content-engine)' },
-      redirect: 'follow',
-    });
-    if (!res.ok) throw new ExternalApiError('website', `fetch returned ${res.status}`);
-    html = await res.text();
-  } catch (err) {
-    if ((err as Error).name === 'AbortError') {
-      throw new ExternalApiError('website', 'fetch timed out');
-    }
-    throw err;
-  } finally {
-    clearTimeout(timer);
-  }
-
-  const text = extractText(html);
-  if (text.length < 80) {
-    throw new ValidationError('Could not extract enough readable content from that page');
-  }
+  const { text, hostname } = await fetchSiteTextStrict(input.url);
 
   const { system, user } = buildTopicGenerationPrompt({
     brand: input.brand,
@@ -200,12 +242,12 @@ export async function generateTopicsFromWebsite(input: {
       priority: input.count - i,
       source: 'ai' as const,
       status: 'pending' as const,
-      metadata: { origin: 'website', source_host: u.hostname },
+      metadata: { origin: 'website', source_host: hostname },
     };
   });
   const inserted = await insertTopics(rows);
   log.info(
-    { orgId: input.organization.id, host: u.hostname, count: inserted.length },
+    { orgId: input.organization.id, host: hostname, count: inserted.length },
     'Website topics inserted',
   );
   return inserted;

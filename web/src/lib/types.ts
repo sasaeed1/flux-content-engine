@@ -31,6 +31,7 @@ export interface BrandProfile {
   postStyle: string | null;
   ctaStyle: string | null;
   logoUrl: string | null;
+  website: string | null;
   voiceKeywords: string[];
   voiceAvoid: string[];
   personality?: {
