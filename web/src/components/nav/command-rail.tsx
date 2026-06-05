@@ -16,6 +16,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
   Activity,
+  Aperture,
   CalendarRange,
   ChevronsLeft,
   Film,
@@ -47,6 +48,7 @@ const GROUPS: Group[] = [
     items: [
       { href: '/forge', label: 'Forge', icon: Wand2, cta: true },
       { href: '/motion', label: 'Motion', icon: Film },
+      { href: '/media', label: 'Studio', icon: Aperture },
       { href: '/campaign', label: 'Campaign', icon: CalendarRange },
     ],
   },

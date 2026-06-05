@@ -11,6 +11,7 @@ export async function ensureBuckets(): Promise<void> {
     env.SUPABASE_RENDER_BUCKET,
     env.SUPABASE_LOGO_BUCKET,
     env.SUPABASE_REEL_BUCKET,
+    env.SUPABASE_MEDIA_BUCKET,
   ]) {
     const { data } = await supabase.storage.getBucket(bucket);
     if (data) continue;
@@ -67,4 +68,10 @@ export const storagePaths = {
     `orgs/${orgId}/brand-kit/${assetId}.${ext}`,
   /** Final rendered cinematic reel (MP4) for a carousel. */
   reel: (orgId: string, reelId: string): string => `orgs/${orgId}/reels/${reelId}.mp4`,
+  /** Media Studio — original uploaded asset. */
+  mediaOriginal: (orgId: string, assetId: string, ext: string): string =>
+    `orgs/${orgId}/media/${assetId}/original.${ext}`,
+  /** Media Studio — enhanced output. */
+  mediaEnhanced: (orgId: string, assetId: string, ext: string): string =>
+    `orgs/${orgId}/media/${assetId}/enhanced.${ext}`,
 };

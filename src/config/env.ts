@@ -32,6 +32,7 @@ const schema = z.object({
   SUPABASE_IMAGE_BUCKET: z.string().default('content-images'),
   SUPABASE_RENDER_BUCKET: z.string().default('content-renders'),
   SUPABASE_LOGO_BUCKET: z.string().default('brand-logos'),
+  SUPABASE_MEDIA_BUCKET: z.string().default('media-studio'),
 
   // ----- LLM provider — primary (legacy single-provider path) -----
   AI_PROVIDER: z.enum(['groq', 'openai', 'ollama']).default('groq'),

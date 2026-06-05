@@ -179,6 +179,51 @@ export interface PublishOutcome {
   error?: string;
 }
 
+// ----- AI Media Intelligence Studio -----
+export interface MediaScores {
+  sharpness: number;
+  exposure: number;
+  contrast: number;
+  resolution: number;
+  composition: number;
+  social: number;
+}
+
+export interface MediaAnalysis {
+  width: number;
+  height: number;
+  megapixels: number;
+  aspectRatio: number;
+  bytes: number;
+  format: string;
+  brightness: number;
+  dominantColor: string;
+  scores: MediaScores;
+  flags: string[];
+}
+
+export interface MediaAsset {
+  id: string;
+  kind: string;
+  filename: string | null;
+  source_url: string;
+  enhanced_url: string | null;
+  width: number | null;
+  height: number | null;
+  bytes: number | null;
+  analysis: MediaAnalysis;
+  overall_score: number | null;
+  status: string;
+  metadata: { enhance_applied?: string[]; enhanced_at?: string } | null;
+  created_at: string;
+}
+
+export interface DirectorVerdict {
+  headline: string;
+  hero_pick?: string;
+  notes: string[];
+}
+
 export interface OrgOverview {
   organization_id: string;
   name: string;

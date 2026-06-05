@@ -11,6 +11,7 @@ import intelligence from './intelligence.routes';
 import reels from './reels.routes';
 import settings from './settings.routes';
 import social from './social.routes';
+import media from './media.routes';
 
 const router = Router();
 
@@ -31,6 +32,7 @@ api.use(intelligence);
 api.use(reels);
 api.use(settings);
 api.use(social);
+api.use(media);
 api.use(ops);
 router.use('/api', api);
 

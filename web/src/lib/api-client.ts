@@ -14,6 +14,8 @@ import type {
   FluxSettings,
   InstagramAccount,
   Organization,
+  DirectorVerdict,
+  MediaAsset,
   OrgOverview,
   PipelineRun,
   PlatformDescriptor,
@@ -328,6 +330,23 @@ export const api = {
       `/api/tenant/carousels/${carouselId}/publish-to`,
       { method: 'POST', json: { connectionIds } },
     ),
+
+  // ── AI Media Intelligence Studio ──────────────────────────────────────
+  listMedia: () => engineFetch<{ assets: MediaAsset[] }>('/api/tenant/media'),
+  uploadMedia: (body: { filename?: string; contentType?: string; data: string }) =>
+    engineFetch<{ asset: MediaAsset }>('/api/tenant/media', { method: 'POST', json: body }),
+  enhanceMedia: (id: string, body: { upscale?: boolean; brandGrade?: boolean; intensity?: number }) =>
+    engineFetch<{ asset: MediaAsset }>(`/api/tenant/media/${id}/enhance`, {
+      method: 'POST',
+      json: body,
+    }),
+  deleteMedia: (id: string) =>
+    engineFetch<{ ok: true }>(`/api/tenant/media/${id}`, { method: 'DELETE' }),
+  mediaDirector: () =>
+    engineFetch<{ verdict: DirectorVerdict | null }>('/api/tenant/media/director', {
+      method: 'POST',
+      json: {},
+    }),
 
   // ── motion / reels ────────────────────────────────────────────────────
   reels: {
