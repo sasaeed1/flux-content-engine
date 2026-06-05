@@ -106,6 +106,8 @@ export interface PipelineStreamRequest {
   templateKey?: string;
   draftOnly?: boolean;
   approvalMode?: 'auto' | 'manual';
+  /** Carousel slide count (3-10) — overrides the template default. */
+  slideCount?: number;
 }
 
 /**

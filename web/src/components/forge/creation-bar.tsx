@@ -36,6 +36,8 @@ export function CreationBar({
   onIgnite,
   draftFirst,
   setDraftFirst,
+  slideCount,
+  setSlideCount,
 }: {
   topic: string;
   setTopic: (v: string) => void;
@@ -48,6 +50,8 @@ export function CreationBar({
   onIgnite: () => void;
   draftFirst: boolean;
   setDraftFirst: (v: boolean) => void;
+  slideCount: number | null;
+  setSlideCount: (n: number | null) => void;
 }) {
   const [angles, setAngles] = useState<string[]>([]);
   const [thinking, startThinking] = useTransition();
@@ -107,8 +111,28 @@ export function CreationBar({
         </div>
       )}
 
-      {/* draft-first toggle */}
-      <div className="flex items-center justify-end px-1">
+      {/* controls — slide count + draft-first */}
+      <div className="flex items-center justify-between gap-3 px-1">
+        <div className="flex items-center gap-1.5">
+          <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-fg-dim">
+            Slides
+          </span>
+          {([null, 5, 7, 9] as (number | null)[]).map((n) => (
+            <button
+              key={n ?? 'auto'}
+              type="button"
+              onClick={() => setSlideCount(n)}
+              className={cn(
+                'press rounded-pill border px-2.5 py-1 text-[11.5px] transition',
+                slideCount === n
+                  ? 'border-flux-cyan/50 bg-surface-2 text-fg'
+                  : 'border-edge-subtle bg-surface-1 text-fg-muted hover:text-fg',
+              )}
+            >
+              {n ?? 'Auto'}
+            </button>
+          ))}
+        </div>
         <button
           type="button"
           onClick={() => setDraftFirst(!draftFirst)}

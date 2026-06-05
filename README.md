@@ -272,4 +272,5 @@ self-hosted ComfyUI (GPU rental / on-prem).
 - [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) — VPS setup, Supabase, Instagram, Chrome, production
 - [`docs/INTEGRATION.md`](docs/INTEGRATION.md) — how this slots into WappFlow CRM
 - [`docs/ROADMAP.md`](docs/ROADMAP.md) — what's done in this foundation vs. next phases
+- [`docs/PROVIDER-SETUP.md`](docs/PROVIDER-SETUP.md) — free-tier AI provider onboarding (which keys to get, where, how Flux orchestrates them)
 - [`docs/FUTURE-AI-MEDIA-STUDIO.md`](docs/FUTURE-AI-MEDIA-STUDIO.md) — long-term vision: the AI Media Intelligence Studio (**deferred** — do not implement until the core platform is production-stable)

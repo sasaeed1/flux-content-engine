@@ -46,6 +46,7 @@ export function ForgeWrapper({
   const [topic, setTopic] = useState(initialSeed);
   const [selectedKey, setSelectedKey] = useState<string | null>(styles[0]?.key ?? null);
   const [draftFirst, setDraftFirst] = useState(false);
+  const [slideCount, setSlideCount] = useState<number | null>(null);
   const { state, start, reset } = usePipelineStream();
 
   const busy = state.status === 'connecting' || state.status === 'running';
@@ -76,6 +77,7 @@ export function ForgeWrapper({
         styleModeKey: selectedKey ?? undefined,
         approvalMode: 'manual',
         draftOnly: draftFirst,
+        slideCount: slideCount ?? undefined,
       });
     })();
   };
@@ -122,6 +124,8 @@ export function ForgeWrapper({
           onIgnite={onIgnite}
           draftFirst={draftFirst}
           setDraftFirst={setDraftFirst}
+          slideCount={slideCount}
+          setSlideCount={setSlideCount}
         />
       )}
     </div>
