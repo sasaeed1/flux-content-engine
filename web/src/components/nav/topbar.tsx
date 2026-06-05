@@ -5,6 +5,7 @@ import { MobileNavButton } from '@/components/nav/mobile-nav';
 import { CmdKSearchButton } from '@/components/nav/cmdk-search-button';
 import { TopbarPulse } from '@/components/nav/topbar-pulse';
 import { CopilotTrigger } from '@/components/flux/copilot-trigger';
+import { UserMenu } from '@/components/nav/user-menu';
 import { api } from '@/lib/api-client';
 
 /**
@@ -14,9 +15,11 @@ import { api } from '@/lib/api-client';
  */
 export async function Topbar() {
   let orgName = process.env.NEXT_PUBLIC_FLUX_APP_NAME ?? 'Flux';
+  let tier: string | undefined;
   try {
     const { organization } = await api.me();
     if (organization?.name) orgName = organization.name;
+    tier = organization?.subscription_tier ?? undefined;
   } catch {
     /* engine down — show fallback */
   }
@@ -34,12 +37,6 @@ export async function Topbar() {
       </div>
 
       <div className="flex items-center gap-2">
-        {/* workspace status — quiet */}
-        <div className="hidden items-center gap-2 rounded-pill border border-edge-subtle bg-surface-1 px-3 py-1.5 text-xs sm:flex">
-          <span className="h-1.5 w-1.5 rounded-full bg-state-success shadow-[0_0_8px_var(--success)]" />
-          <span className="text-fg-muted">{orgName}</span>
-        </div>
-
         {/* compact engine pulse mirror */}
         <div className="hidden h-9 items-center rounded-pill border border-edge-subtle bg-surface-1 px-2.5 sm:flex">
           <TopbarPulse />
@@ -55,6 +52,9 @@ export async function Topbar() {
 
         {/* Copilot summon */}
         <CopilotTrigger />
+
+        {/* Account — settings, help, log out */}
+        <UserMenu orgName={orgName} tier={tier} />
       </div>
     </header>
   );

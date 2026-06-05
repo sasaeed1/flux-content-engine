@@ -21,6 +21,7 @@ import {
   Film,
   Fingerprint,
   LayoutGrid,
+  LifeBuoy,
   PanelLeft,
   Settings,
   Sparkles,
@@ -55,6 +56,7 @@ const GROUPS: Group[] = [
       { href: '/library', label: 'Library', icon: LayoutGrid },
       { href: '/brand', label: 'Brand Studio', icon: Fingerprint },
       { href: '/settings', label: 'Settings', icon: Settings },
+      { href: '/help', label: 'Help', icon: LifeBuoy },
     ],
   },
 ];

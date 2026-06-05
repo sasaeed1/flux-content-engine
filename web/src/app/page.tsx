@@ -19,11 +19,13 @@ import {
   Sparkles,
   Users,
   Wand2,
+  X,
   Zap,
 } from 'lucide-react';
 import { AuroraBackground } from '@/components/flux/aurora-bg';
 import { Logo } from '@/components/flux/logo';
 import { GradientText } from '@/components/flux/gradient-text';
+import { Reveal, Counter } from '@/components/flux/reveal';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 
@@ -247,6 +249,35 @@ export default function HomePage() {
         <p className="mt-5 text-xs text-muted-foreground">
           No credit card required · 5 carousels free / month
         </p>
+      </section>
+
+      {/* Animated metrics band */}
+      <section className="relative mx-auto mt-16 max-w-5xl px-4 sm:mt-24 sm:px-6">
+        <Reveal className="grid grid-cols-2 gap-4 rounded-3xl border border-border/50 bg-card/40 p-6 backdrop-blur-xl sm:grid-cols-4 sm:p-8">
+          {[
+            { v: <Counter to={60} suffix="s" />, label: 'Idea → finished post' },
+            { v: <Counter to={40} />, label: 'Cinematic style modes' },
+            { v: <Counter to={20} suffix="+" />, label: 'Posts / month, on autopilot' },
+            {
+              v: (
+                <>
+                  <span className="align-top text-2xl sm:text-3xl">$</span>
+                  <Counter to={19} />
+                </>
+              ),
+              label: 'A month — not $2,400',
+            },
+          ].map((m, i) => (
+            <div key={i} className="text-center">
+              <div className="text-3xl font-bold tracking-tight sm:text-5xl">
+                <GradientText>{m.v}</GradientText>
+              </div>
+              <div className="mt-1.5 text-[11px] uppercase tracking-[0.14em] text-muted-foreground sm:text-xs">
+                {m.label}
+              </div>
+            </div>
+          ))}
+        </Reveal>
       </section>
 
       {/* Feature row */}
@@ -534,6 +565,61 @@ export default function HomePage() {
           Annual billing saves 20%. All paid plans include a 7-day free trial — no
           credit card required.
         </p>
+      </section>
+
+      {/* Old way vs the Flux way */}
+      <section className="relative mx-auto mt-24 max-w-5xl px-4 sm:mt-32 sm:px-6">
+        <div className="text-center">
+          <Badge variant="outline">Why switch</Badge>
+          <h2 className="mt-5 text-3xl font-semibold tracking-tight sm:text-5xl">
+            The old way vs <GradientText>the Flux way</GradientText>.
+          </h2>
+        </div>
+        <div className="mt-12 grid gap-4 sm:grid-cols-2">
+          <Reveal className="rounded-2xl border border-border/50 bg-secondary/20 p-6 sm:p-7">
+            <div className="text-xs font-bold uppercase tracking-[0.18em] text-muted-foreground">
+              The old way
+            </div>
+            <ul className="mt-5 space-y-3.5">
+              {[
+                'Stare at a blank Canva every morning',
+                '$2,400/mo designer — or a freelancer who ghosts',
+                'Every post looks slightly different',
+                'Captions + hashtags written from scratch',
+                'Reels? Maybe next quarter',
+              ].map((t) => (
+                <li key={t} className="flex items-start gap-3 text-sm text-muted-foreground">
+                  <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-red-500/10">
+                    <X className="h-3 w-3 text-red-400" />
+                  </span>
+                  {t}
+                </li>
+              ))}
+            </ul>
+          </Reveal>
+          <Reveal
+            delay={0.1}
+            className="rounded-2xl border-2 border-primary/40 bg-gradient-to-b from-primary/10 to-card/60 p-6 shadow-[0_0_40px_-12px_rgba(139,92,246,0.5)] sm:p-7"
+          >
+            <div className="text-xs font-bold uppercase tracking-[0.18em] text-primary">
+              With Flux
+            </div>
+            <ul className="mt-5 space-y-3.5">
+              {[
+                'One topic in → finished carousel out in 60s',
+                '$19/mo. No designer, no Canva',
+                'Locked to your brand — every post, every time',
+                'Captions + hashtags written in your voice',
+                'One-click cinematic reels, on autopilot',
+              ].map((t) => (
+                <li key={t} className="flex items-start gap-3 text-sm">
+                  <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
+                  {t}
+                </li>
+              ))}
+            </ul>
+          </Reveal>
+        </div>
       </section>
 
       {/* CTA strip */}
