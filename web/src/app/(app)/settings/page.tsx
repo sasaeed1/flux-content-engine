@@ -5,8 +5,9 @@ import { Badge } from '@/components/ui/badge';
 import { InstagramConnect } from '@/components/settings/instagram-connect';
 import { ApiKeyReveal } from '@/components/settings/api-key-reveal';
 import { BrandKitUpload } from '@/components/settings/brand-kit-upload';
+import { SystemSettings } from '@/components/settings/system-settings';
 import { api } from '@/lib/api-client';
-import type { InstagramAccount, Organization } from '@/lib/types';
+import type { FluxSettings, InstagramAccount, Organization } from '@/lib/types';
 
 export const dynamic = 'force-dynamic';
 export const metadata = { title: 'Settings · Flux' };
@@ -38,17 +39,20 @@ export default async function SettingsPage() {
   let org: Organization | null = null;
   let accounts: InstagramAccount[] = [];
   let brandAssets: Awaited<ReturnType<typeof api.listBrandAssets>>['assets'] = [];
+  let settings: FluxSettings | null = null;
   let connectionError: string | null = null;
 
   try {
-    const [meRes, igRes, baRes] = await Promise.all([
+    const [meRes, igRes, baRes, setRes] = await Promise.all([
       api.me(),
       api.listInstagramAccounts(),
       api.listBrandAssets().catch(() => ({ assets: [] })),
+      api.settings().catch(() => null),
     ]);
     org = meRes.organization;
     accounts = igRes.accounts;
     brandAssets = baRes.assets ?? [];
+    settings = setRes?.settings ?? null;
   } catch (err) {
     connectionError = err instanceof Error ? err.message : 'Engine unreachable';
   }
@@ -103,6 +107,8 @@ export default async function SettingsPage() {
           <Tile icon={Shield} label="Tier" value={tierInfo.label} />
         </div>
       </section>
+
+      {settings && <SystemSettings initial={settings} />}
 
       {/* Brand kit */}
       <section id="brand-kit" className="rounded-2xl glass p-6">

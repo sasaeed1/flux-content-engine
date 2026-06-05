@@ -3,6 +3,12 @@
 import { revalidatePath } from 'next/cache';
 import { api } from '@/lib/api-client';
 
+export async function updateSettingsAction(patch: Record<string, unknown>) {
+  const res = await api.updateSettings(patch);
+  revalidatePath('/settings');
+  return res;
+}
+
 export async function connectInstagramAction(body: {
   igBusinessAccountId: string;
   accessToken: string;

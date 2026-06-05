@@ -89,6 +89,8 @@ export async function generateCarouselContent(input: {
   angle?: string | null;
   /** Optional user-requested slide count (3–10) — overrides the template. */
   slideCount?: number;
+  /** Optional generation temperature (from org creativity setting). */
+  temperature?: number;
 }): Promise<CarouselContent & { hookArchetype: HookArchetype; layoutArchetypes: LayoutArchetype[] }> {
   const effectiveSlides = diversifyLayouts(
     adjustSlideCount(input.template.definition.slides, input.slideCount),
@@ -158,7 +160,7 @@ export async function generateCarouselContent(input: {
   });
 
   const raw = await completeJson(
-    { system, user, schema: carouselContentSchema, temperature: 0.85 },
+    { system, user, schema: carouselContentSchema, temperature: input.temperature ?? 0.85 },
     ctxFromOrg(input.organization),
   );
 

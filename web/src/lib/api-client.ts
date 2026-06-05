@@ -11,6 +11,7 @@ import { cookies } from 'next/headers';
 import type {
   BrandProfile,
   CarouselRow,
+  FluxSettings,
   InstagramAccount,
   Organization,
   OrgOverview,
@@ -281,6 +282,14 @@ export const api = {
     }>('/api/tenant/carousels/bulk/approve', {
       method: 'POST',
       json: { carouselIds, publishAt },
+    }),
+
+  // ── settings ──────────────────────────────────────────────────────────
+  settings: () => engineFetch<{ settings: FluxSettings }>('/api/tenant/settings'),
+  updateSettings: (patch: Record<string, unknown>) =>
+    engineFetch<{ ok: true; settings: FluxSettings }>('/api/tenant/settings', {
+      method: 'PATCH',
+      json: patch,
     }),
 
   // ── motion / reels ────────────────────────────────────────────────────

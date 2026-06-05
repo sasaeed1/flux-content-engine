@@ -130,6 +130,13 @@ export interface ReelRow {
   updated_at: string;
 }
 
+export interface FluxSettings {
+  generation: { defaultSlideCount: number | null; creativity: number; hashtagCount: number };
+  motion: { defaultAspect: 'reel' | 'square' | 'portrait'; defaultPreset: string; kineticByDefault: boolean };
+  seo: { optimize: boolean };
+  notifications: { onPublish: boolean; onFailure: boolean };
+}
+
 export interface OrgOverview {
   organization_id: string;
   name: string;

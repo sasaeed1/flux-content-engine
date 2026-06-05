@@ -38,6 +38,7 @@ import { generateCarouselContent } from '../modules/content/carouselContentServi
 import { generateSinglePostContent } from '../modules/content/singlePostContentService';
 import { composeSlides } from '../modules/render/composer';
 import { loadStyleMode } from '../modules/styles/loader';
+import { loadSettings } from '../modules/settings/settings';
 import { resolveInstagramAccount } from '../modules/publish/accountService';
 import { logFailure } from '../modules/logging/failureLogger';
 import { PIPELINE_STEPS, type PipelineStep } from '../config/constants';
@@ -95,6 +96,8 @@ export async function runPipeline(
       error: `Organization ${options.organizationId} not found`,
     };
   }
+
+  const settings = loadSettings(org.metadata);
 
   const run = await createRun({
     organization_id: org.id,
@@ -159,7 +162,8 @@ export async function runPipeline(
           template,
           topic: topic!.topic,
           angle: topic!.angle,
-          slideCount: options.slideCount,
+          slideCount: options.slideCount ?? settings.generation.defaultSlideCount ?? undefined,
+          temperature: settings.generation.creativity,
         }),
       );
       slides = carouselContent.slides;

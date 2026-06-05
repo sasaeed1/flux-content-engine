@@ -9,6 +9,7 @@ import webhooks from './webhooks.routes';
 import sso from './sso.routes';
 import intelligence from './intelligence.routes';
 import reels from './reels.routes';
+import settings from './settings.routes';
 
 const router = Router();
 
@@ -27,6 +28,7 @@ api.use(pipeline);
 api.use(edit);
 api.use(intelligence);
 api.use(reels);
+api.use(settings);
 api.use(ops);
 router.use('/api', api);
 
