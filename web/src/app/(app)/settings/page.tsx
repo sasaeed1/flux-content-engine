@@ -1,5 +1,5 @@
 import { Suspense } from 'react';
-import { Activity, Camera, Key, Layers, Shield, Sparkles, User } from 'lucide-react';
+import { Activity, ArrowRight, Camera, Check, Key, Layers, Shield, Sparkles, User } from 'lucide-react';
 import { PageHeader } from '@/components/flux/page-header';
 import { Badge } from '@/components/ui/badge';
 import { InstagramConnect } from '@/components/settings/instagram-connect';
@@ -33,6 +33,37 @@ const TIER_COPY: Record<string, { label: string; color: string; desc: string }> 
     color: 'bg-pink-600/30 text-pink-100',
     desc: 'Unlimited · custom models · priority support',
   },
+};
+
+const PLAN_PERKS: Record<string, string[]> = {
+  free: [
+    '5 carousels / month',
+    '40 cinematic style modes',
+    'Cinematic reels — rendered locally, zero cost',
+    'Manual approval workflow',
+    '1 brand profile · 1 Instagram account',
+  ],
+  starter: [
+    '50 carousels / month',
+    'No watermark',
+    'Auto-schedule to Instagram',
+    'Inline caption + slide rewrites',
+    '2 brand profiles · 2 Instagram accounts',
+  ],
+  growth: [
+    '250 carousels / month',
+    'Multi-brand workspaces',
+    'Analytics + performance feedback',
+    'Brand-kit ingestion (PDF / logo)',
+    '5 brand profiles · 5 Instagram accounts',
+  ],
+  enterprise: [
+    'Unlimited brands & Instagram accounts',
+    'Client approval links + white-label exports',
+    'Custom models / BYOK',
+    'SSO + audit logs',
+    'Priority support + dedicated onboarding',
+  ],
 };
 
 export default async function SettingsPage() {
@@ -69,8 +100,29 @@ export default async function SettingsPage() {
             Your <span className="gradient-text">settings</span>.
           </>
         }
-        subtitle="Manage your workspace, Instagram connections, and API access."
+        subtitle="Everything that shapes how Flux works for you — defaults, connections, brand, plan, and access. All in one place."
       />
+
+      {/* Sticky section nav — jump anywhere, stay in control */}
+      <nav className="sticky top-16 z-10 -mx-1 flex flex-wrap gap-1.5 rounded-xl border border-edge-subtle bg-surface-0/80 px-2 py-2 backdrop-blur-xl">
+        {[
+          { href: '#workspace', label: 'Workspace' },
+          { href: '#defaults', label: 'Defaults' },
+          { href: '#brand-kit', label: 'Brand kit' },
+          { href: '#instagram', label: 'Instagram' },
+          { href: '#api', label: 'API' },
+          { href: '#plan', label: 'Plan & usage' },
+          { href: '#danger', label: 'Danger' },
+        ].map((s) => (
+          <a
+            key={s.href}
+            href={s.href}
+            className="press rounded-md px-2.5 py-1.5 text-[13px] font-medium text-fg-muted transition hover:bg-surface-2 hover:text-fg"
+          >
+            {s.label}
+          </a>
+        ))}
+      </nav>
 
       {connectionError && (
         <div className="rounded-xl border border-destructive/40 bg-destructive/10 p-4 text-sm text-red-200">
@@ -79,7 +131,7 @@ export default async function SettingsPage() {
       )}
 
       {/* Workspace card */}
-      <section className="rounded-2xl glass p-6">
+      <section id="workspace" className="scroll-mt-32 rounded-2xl glass p-6">
         <header className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-flux-soft">
@@ -108,7 +160,11 @@ export default async function SettingsPage() {
         </div>
       </section>
 
-      {settings && <SystemSettings initial={settings} />}
+      {settings && (
+        <div id="defaults" className="scroll-mt-32">
+          <SystemSettings initial={settings} />
+        </div>
+      )}
 
       {/* Brand kit */}
       <section id="brand-kit" className="rounded-2xl glass p-6">
@@ -134,7 +190,7 @@ export default async function SettingsPage() {
       </section>
 
       {/* Instagram accounts */}
-      <section className="rounded-2xl glass p-6">
+      <section id="instagram" className="scroll-mt-32 rounded-2xl glass p-6">
         <header className="flex items-center gap-3">
           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-flux-soft">
             <Camera className="h-5 w-5 text-primary" />
@@ -160,7 +216,7 @@ export default async function SettingsPage() {
       </section>
 
       {/* API key */}
-      <section className="rounded-2xl glass p-6">
+      <section id="api" className="scroll-mt-32 rounded-2xl glass p-6">
         <header className="flex items-center gap-3">
           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-flux-soft">
             <Key className="h-5 w-5 text-primary" />
@@ -179,8 +235,47 @@ export default async function SettingsPage() {
         </div>
       </section>
 
+      {/* Plan & usage */}
+      <section id="plan" className="scroll-mt-32 rounded-2xl glass p-6">
+        <header className="flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-flux-soft">
+            <Sparkles className="h-5 w-5 text-primary" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <h2 className="text-lg font-semibold">Plan &amp; usage</h2>
+            <p className="text-sm text-muted-foreground">
+              Your workspace tier and what it unlocks.
+            </p>
+          </div>
+          <Badge className={tierInfo.color}>{tierInfo.label}</Badge>
+        </header>
+
+        <div className="mt-6 grid gap-2.5 sm:grid-cols-2">
+          {(PLAN_PERKS[tier] ?? PLAN_PERKS.free).map((perk) => (
+            <div key={perk} className="flex items-start gap-2 text-sm">
+              <Check className="mt-0.5 h-4 w-4 shrink-0 text-emerald-400" />
+              <span>{perk}</span>
+            </div>
+          ))}
+        </div>
+
+        {tier === 'free' && (
+          <div className="mt-6 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-primary/30 bg-primary/[0.06] p-4">
+            <p className="text-sm text-muted-foreground">
+              Want no watermark, auto-scheduling, and 50+ carousels a month?
+            </p>
+            <a
+              href="/#pricing"
+              className="inline-flex items-center gap-1.5 rounded-lg bg-flux-gradient px-3.5 py-2 text-sm font-semibold text-flux-ink glow-cta"
+            >
+              Upgrade <ArrowRight className="h-3.5 w-3.5" />
+            </a>
+          </div>
+        )}
+      </section>
+
       {/* Danger zone */}
-      <section className="rounded-2xl border border-red-500/30 bg-red-500/[0.04] p-6">
+      <section id="danger" className="scroll-mt-32 rounded-2xl border border-red-500/30 bg-red-500/[0.04] p-6">
         <header className="flex items-center gap-3">
           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-red-500/10">
             <Shield className="h-5 w-5 text-red-300" />
