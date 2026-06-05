@@ -146,6 +146,11 @@ export const api = {
       method: 'POST',
       json: { count, themeHint },
     }),
+  topicsFromWebsite: (url: string, count?: number) =>
+    engineFetch<{ inserted: number; topics: unknown[] }>('/api/tenant/topics/from-website', {
+      method: 'POST',
+      json: { url, count },
+    }),
 
   runPipeline: (body: {
     topicId?: string;

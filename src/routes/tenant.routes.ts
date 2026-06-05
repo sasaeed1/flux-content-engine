@@ -33,7 +33,7 @@ import {
   dnaToBrandPatch,
   type ProposedBrandDna,
 } from '../modules/brand/dnaExtractor';
-import { generateAndInsertTopics } from '../modules/topics/topicService';
+import { generateAndInsertTopics, generateTopicsFromWebsite } from '../modules/topics/topicService';
 import type { ContentTopicRow, BrandProfileRow } from '../types';
 
 const router = Router();
@@ -304,6 +304,23 @@ router.post(
       count,
       themeHint,
     });
+    res.status(201).json({ inserted: inserted.length, topics: inserted });
+  }),
+);
+
+// Generate on-brand topics by analyzing the brand's own website.
+router.post(
+  '/tenant/topics/from-website',
+  generationRateLimit,
+  asyncHandler(async (req, res) => {
+    const orgId = req.tenant!.organizationId;
+    const url = typeof req.body?.url === 'string' ? req.body.url.trim() : '';
+    if (!url) throw new ValidationError('Field "url" is required');
+    const count = Math.min(20, Math.max(1, Number(req.body?.count) || 8));
+    const org = await getOrgById(orgId);
+    if (!org) throw new ValidationError('Organization vanished');
+    const brand = await loadBrandProfile(orgId);
+    const inserted = await generateTopicsFromWebsite({ organization: org, brand, url, count });
     res.status(201).json({ inserted: inserted.length, topics: inserted });
   }),
 );
