@@ -38,9 +38,12 @@ export async function addTopicOnDayAction(topic: string, scheduledDate: string) 
   return res;
 }
 
-/** Sprint H — forge a month of carousels from pending topics (background batch). */
+/** Sprint H — forge a month of carousels from pending topics (background batch).
+ *  Full render (draftOnly:false) so finished carousels land in the Library as
+ *  "ready" — "forge the month" should produce usable posts, not bare scripts.
+ *  (The explicit per-carousel "Draft first" toggle in the Forge still drafts.) */
 export async function forgeTheMonthAction(count: number, styleModeKey?: string) {
-  const res = await api.batchPipeline({ count, draftOnly: true, styleModeKey });
+  const res = await api.batchPipeline({ count, draftOnly: false, styleModeKey });
   revalidatePath('/campaign');
   revalidatePath('/library');
   return res;

@@ -167,7 +167,7 @@ export function CampaignCalendar({
           // The batch runs sequentially in the background (~10-30s each). Poll a
           // few times so topics visibly flip pending → processing → generated and
           // the new drafts surface, instead of the calendar looking frozen.
-          [3000, 8000, 16000, 28000, 45000].forEach((ms) =>
+          [4000, 12000, 24000, 40000, 60000, 90000].forEach((ms) =>
             setTimeout(() => router.refresh(), ms),
           );
         } else {
@@ -237,13 +237,13 @@ export function CampaignCalendar({
               <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin" />
               <span>
                 Forging {batchNote.queued} {batchNote.queued === 1 ? 'carousel' : 'carousels'} in the
-                background — each lands as a draft (watch the topics flip to “generated”).
+                background — each appears in your Library when it finishes (topics flip to “generated”).
               </span>
               <Link
-                href="/library?status=drafts"
+                href="/library"
                 className="press ml-auto shrink-0 rounded-sm border border-flux-violet/40 px-2 py-1 text-[12px] font-semibold hover:bg-flux-violet/15"
               >
-                View drafts →
+                View Library →
               </Link>
             </>
           ) : (
