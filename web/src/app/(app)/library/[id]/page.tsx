@@ -8,6 +8,7 @@ import { CaptionEditor } from '@/components/carousel/caption-editor';
 import { CtaEditor } from '@/components/carousel/cta-editor';
 import { RestyleSwitcher } from '@/components/carousel/restyle-switcher';
 import { ReelStudio } from '@/components/motion/reel-studio';
+import { PublishToChannels } from '@/components/carousel/publish-to-channels';
 import { api } from '@/lib/api-client';
 import { fmtRelative } from '@/lib/format';
 
@@ -48,6 +49,13 @@ export default async function CarouselDetailPage({
     ({ reels } = await api.reels.list(id));
   } catch {
     /* generated_reels table may not exist until the migration is applied */
+  }
+
+  let socialConnections: Awaited<ReturnType<typeof api.connections>>['connections'] = [];
+  try {
+    ({ connections: socialConnections } = await api.connections());
+  } catch {
+    /* no channels connected yet */
   }
 
   return (
@@ -130,6 +138,8 @@ export default async function CarouselDetailPage({
 
         <aside className="space-y-4">
           <ApprovalBar carouselId={carousel.id} status={carousel.status} />
+
+          <PublishToChannels carouselId={carousel.id} connections={socialConnections} />
 
           <ReelStudio carouselId={carousel.id} initialReels={reels} />
 

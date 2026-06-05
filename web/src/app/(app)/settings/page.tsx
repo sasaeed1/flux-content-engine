@@ -1,13 +1,20 @@
 import { Suspense } from 'react';
-import { Activity, ArrowRight, Camera, Check, Key, Layers, Shield, Sparkles, User } from 'lucide-react';
+import { Activity, ArrowRight, Camera, Check, Key, Layers, Share2, Shield, Sparkles, User } from 'lucide-react';
 import { PageHeader } from '@/components/flux/page-header';
 import { Badge } from '@/components/ui/badge';
 import { InstagramConnect } from '@/components/settings/instagram-connect';
+import { Connections } from '@/components/settings/connections';
 import { ApiKeyReveal } from '@/components/settings/api-key-reveal';
 import { BrandKitUpload } from '@/components/settings/brand-kit-upload';
 import { SystemSettings } from '@/components/settings/system-settings';
 import { api } from '@/lib/api-client';
-import type { FluxSettings, InstagramAccount, Organization } from '@/lib/types';
+import type {
+  FluxSettings,
+  InstagramAccount,
+  Organization,
+  PlatformDescriptor,
+  SocialConnectionPublic,
+} from '@/lib/types';
 
 export const dynamic = 'force-dynamic';
 export const metadata = { title: 'Settings · Flux' };
@@ -71,19 +78,24 @@ export default async function SettingsPage() {
   let accounts: InstagramAccount[] = [];
   let brandAssets: Awaited<ReturnType<typeof api.listBrandAssets>>['assets'] = [];
   let settings: FluxSettings | null = null;
+  let platforms: PlatformDescriptor[] = [];
+  let socialConnections: SocialConnectionPublic[] = [];
   let connectionError: string | null = null;
 
   try {
-    const [meRes, igRes, baRes, setRes] = await Promise.all([
+    const [meRes, igRes, baRes, setRes, connRes] = await Promise.all([
       api.me(),
       api.listInstagramAccounts(),
       api.listBrandAssets().catch(() => ({ assets: [] })),
       api.settings().catch(() => null),
+      api.connections().catch(() => ({ platforms: [], connections: [] })),
     ]);
     org = meRes.organization;
     accounts = igRes.accounts;
     brandAssets = baRes.assets ?? [];
     settings = setRes?.settings ?? null;
+    platforms = connRes.platforms ?? [];
+    socialConnections = connRes.connections ?? [];
   } catch (err) {
     connectionError = err instanceof Error ? err.message : 'Engine unreachable';
   }
@@ -110,6 +122,7 @@ export default async function SettingsPage() {
           { href: '#defaults', label: 'Defaults' },
           { href: '#brand-kit', label: 'Brand kit' },
           { href: '#instagram', label: 'Instagram' },
+          { href: '#channels', label: 'Channels' },
           { href: '#api', label: 'API' },
           { href: '#plan', label: 'Plan & usage' },
           { href: '#danger', label: 'Danger' },
@@ -212,6 +225,28 @@ export default async function SettingsPage() {
           <Suspense>
             <InstagramConnect accounts={accounts} />
           </Suspense>
+        </div>
+      </section>
+
+      {/* Channels — multi-platform publishing */}
+      <section id="channels" className="scroll-mt-32 rounded-2xl glass p-6">
+        <header className="flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-flux-soft">
+            <Share2 className="h-5 w-5 text-primary" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <h2 className="text-lg font-semibold">Publishing channels</h2>
+            <p className="text-sm text-muted-foreground">
+              Connect LinkedIn, TikTok, and Instagram to cross-post your carousels + reels. Paste a
+              token to connect now — one-click OAuth lights up once the platform API keys are added.
+            </p>
+          </div>
+          <Badge variant={socialConnections.length ? 'success' : 'outline'}>
+            {socialConnections.length} connected
+          </Badge>
+        </header>
+        <div className="mt-6">
+          <Connections platforms={platforms} connections={socialConnections} />
         </div>
       </section>
 

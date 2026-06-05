@@ -1,177 +1,205 @@
 # Flux Future Roadmap — AI Media Intelligence Studio
 
-> ⚠️ **STATUS: FUTURE ROADMAP — DO NOT IMPLEMENT NOW.**
->
-> This module is **deferred by design**. It must NOT divert current development
-> priorities. It is to be implemented **only after** the core Flux platform —
-> rendering engine, motion engine, brand kit, asset library, analytics, and
-> content systems — is complete and production-stable.
->
-> This document exists to **preserve and architect the long-term vision** so it
-> can be picked up later without losing intent.
+> ⚠️ **FUTURE ROADMAP MODULE — DO NOT BUILD NOW.**
+> This is a preserved long-term vision, to be implemented **only after** the core
+> platform, rendering engine, brand kit, asset library, analytics, and content
+> systems are production-stable. It must not divert current priorities. This doc
+> exists so the architecture and intent are not lost.
+
+_Last reaffirmed by the product owner: 2026-06-05 (re-pasted in full; preserve, don't build)._
 
 ---
 
-## Vision
+## Objective
 
-Flux should eventually evolve **beyond content generation** into a complete
-**AI-powered creative production studio**.
+Flux should eventually evolve **beyond content generation into a complete
+AI-powered creative production studio.** The goal is not merely generating
+content. The goal is:
 
-The goal is not merely generating content. The goal is:
-
-> **Upload raw images and videos → receive agency-quality, production-ready
+> **Upload raw images and videos and receive agency-quality, production-ready
 > creative assets with minimal manual editing.**
 
 Flux should function as an **AI Creative Director** that understands assets,
 evaluates quality, enhances media, selects the best material, constructs visual
 stories, applies branding, and produces finished outputs.
 
-### Core operating principle
-
-- **The AI is the creative director / decision-maker** — it understands assets,
-  scores quality, ranks material, chooses clips, constructs narratives, and
-  decides grades/treatments.
-- **Deterministic media-processing systems execute** — enhancement, rendering,
-  editing, grading, and export are done by reliable, reproducible pipelines
-  (ffmpeg, sharp, LUTs, self-hosted models), not by the LLM.
-
-This mirrors the philosophy already proven in the **motion engine**: the AI
-decides *what* to make; a zero-cost deterministic ffmpeg pipeline *renders* it.
+**Division of labor (architectural north star):**
+- **The AI is the creative director + decision-maker** — what to use, how to
+  cut, what story, what grade, what crop.
+- **Deterministic media-processing systems execute** enhancement, rendering,
+  editing, grading, and export. (Reproducible, debuggable, cheap to run.)
 
 ---
 
-## The eight modules
+## Module 1 — AI Media Intelligence Layer
 
-### Module 1 — AI Media Intelligence Layer
-**Asset understanding** (on upload, automatically analyze):
-- Images: object / product / face / scene / brand-asset / logo / background detection.
-- Video: scene segmentation, shot detection, face & speaker detection, product
-  detection, activity detection, motion analysis, environment recognition.
+**Asset understanding** on upload.
 
-**Asset quality scoring:**
-- Images: blur, sharpness, lighting, exposure, composition, readability,
-  social-media-suitability.
-- Video: stability, blur, lighting, audio quality, subject visibility,
+- **Image:** object / product / face / scene / brand-asset / logo detection;
+  background identification.
+- **Video:** scene segmentation, shot detection, face + speaker detection,
+  product + activity detection, motion analysis, environment recognition.
+
+**Asset quality scoring** (every asset gets scores).
+
+- **Image:** blur, sharpness, lighting, exposure, composition, readability,
+  social-media suitability.
+- **Video:** stability, blur, lighting, audio quality, subject visibility,
   engagement, usability.
 
-**Asset ranking:** best images, best clips, best hero visuals, most engaging
-footage, most relevant assets — a ranking signal reused across the platform.
+**Asset ranking** — auto-pick best images / clips / hero visuals / most engaging
+footage / most relevant assets. This ranking feeds the whole platform.
 
-### Module 2 — AI Image Enhancement Studio
+_Suggested stack (later): YOLO / Florence-2 / Grounding-DINO (detection),
+MediaPipe (faces), CLIP (scene + relevance), PySceneDetect (shots), NIMA /
+BRISQUE (aesthetic + technical quality), Whisper (speaker/segments)._
+
+---
+
+## Module 2 — AI Image Enhancement Studio
+
 Transform average images into professional marketing assets.
+
 - **Enhancement:** upscaling, denoising, sharpening, exposure correction,
   contrast balancing, white-balance correction, dynamic-range enhancement, face
   enhancement, detail recovery.
-- **AI color correction:** fix lighting, correct color casts, improve contrast
-  and visual consistency.
-- **AI color grading:** brand grading (match brand colors / identity / design
-  language); preset styles (Corporate, Professional, Luxury, Modern, Tech,
-  Startup, Educational, Healthcare, Real Estate); AI style-matching from
-  references.
-- **Background enhancement:** cleanup, subject emphasis, readability,
-  intelligent vignette, focus optimization.
+- **AI color correction:** fix lighting, correct color casts, improve contrast +
+  visual consistency.
+- **AI color grading:**
+  - **Brand grading** — match brand colors / identity / existing design language.
+  - **Preset styles** — Corporate, Professional, Luxury, Modern, Tech, Startup,
+    Educational, Healthcare, Real Estate.
+  - **AI style matching** — user provides references → Flux generates a matching
+    visual treatment.
+- **Background enhancement:** cleanup, improvement, subject emphasis, readability
+  enhancement, intelligent vignette, focus optimization.
 
-### Module 3 — AI Background Intelligence
-Turn uploaded images into intelligent design elements.
-- **Background asset selection:** match images to content, select relevant
-  visuals, choose best-fit imagery automatically (single / multiple / collections).
-- **Intelligent cropping:** detect subject location, safe zones, text zones,
+_Suggested stack (later): Real-ESRGAN / GFPGAN (upscale + face), libvips / OpenCV
+(deterministic correction), 3D LUTs for grades, rembg / SAM (subject/background)._
+
+---
+
+## Module 3 — AI Background Intelligence
+
+Make uploaded images intelligent design elements.
+
+- **Background asset selection** — single image, multiple images, or whole
+  collections → match images to content, select relevant visuals, choose best-fit
+  imagery automatically.
+- **Intelligent cropping** — determine subject location, safe zones, text zones,
   crop regions, focus points.
-- **Layout-aware background generation:** full-image, split-screen, hero,
+- **Layout-aware background generation** — full-image, split-screen, hero,
   editorial, magazine, promotional layouts.
-- **Readability optimization:** auto overlays, gradients, blur regions, contrast
+- **Readability optimization** — auto overlays, gradients, blur regions, contrast
   balancing to keep text legible.
 
-### Module 4 — AI Video Studio
+_Suggested stack (later): saliency + face-aware cropping (smartcrop / attention
+maps), CLIP retrieval for image↔content matching, WCAG contrast solver for
+overlay/gradient generation._
+
+---
+
+## Module 4 — AI Video Studio
+
 Convert raw footage into publishable content automatically.
-- **Multi-video uploads** (individual clips, multiple clips, whole collections —
-  event / product / team / office / educational footage).
-- **Video understanding:** scenes, shots, faces, products, speakers, activities,
+
+- **Multi-video uploads** — individual videos, multiple clips, whole footage
+  collections (event / product / team / office / educational).
+- **Video understanding** — scenes, shots, faces, products, speakers, activities,
   emotions, engagement moments.
-- **Clip scoring engine:** identify high- vs low-value clips; remove/down-rank
+- **Clip scoring engine** — identify high- vs low-value clips; remove/down-rank
   blurry, shaky, dead-time, duplicate, poorly-lit, unusable footage.
-- **Highlight detection:** key moments, product demos, important speaker
-  segments, high-energy and audience-engagement moments.
+- **Highlight detection** — key moments, product demos, important speaker
+  segments, high-energy + audience-engagement moments.
 
-### Module 5 — AI Story Assembly Engine
+_Suggested stack (later): PySceneDetect, VMAF + optical-flow (stability/quality),
+Whisper (transcript-driven highlights), CLIP/keyframe embeddings (dedup + value)._
+
+---
+
+## Module 5 — AI Story Assembly Engine
+
 Build coherent videos automatically.
-- **Story construction:** hook → problem → solution → benefits → CTA (where
-  appropriate).
-- **Intelligent sequencing:** clip order, timing, pacing, narrative structure.
-- **Format awareness:** Instagram Reels, TikTok, YouTube Shorts, LinkedIn Video,
-  promos, ads.
 
-### Module 6 — AI Video Enhancement
-- Stabilization, noise reduction, exposure/contrast/white-balance correction,
-  sharpness enhancement, auto reframing.
-- **Smart reframing:** vertical / square / landscape with subject tracking.
-- **AI color correction** to normalize footage quality.
-- **AI color grading:** brand grades, cinematic grades, platform-specific grades
-  (Instagram / TikTok / LinkedIn / YouTube).
+- **Story construction** — Hook → Problem → Solution → Benefits → CTA where
+  appropriate.
+- **Intelligent sequencing** — clip order, timing, pacing, narrative structure.
+- **Format awareness** — Instagram Reels, TikTok, YouTube Shorts, LinkedIn Video,
+  promos, advertisements.
 
-### Module 7 — Automated Editing
+_Architecture: the LLM is the editor/storyteller producing an **edit decision
+list (EDL)**; a deterministic renderer executes it. Reuse Flux's existing motion
+composer as the executor._
+
+---
+
+## Module 6 — AI Video Enhancement
+
+Improve raw footage automatically.
+
+- **Enhancement:** stabilization, noise reduction, exposure + contrast + white-
+  balance correction, sharpness, auto-reframing.
+- **Smart reframing:** vertical / square / landscape with automatic subject
+  tracking.
+- **AI color correction:** normalize footage quality across clips.
+- **AI color grading:** Brand grades, Cinematic grades, Platform-specific grades
+  (IG / TikTok / LinkedIn / YouTube).
+
+_Suggested stack (later): ffmpeg (vidstab, deshake, eq, zscale), subject-tracking
+reframe (tracking + crop keyframes), 3D-LUT grades._
+
+---
+
+## Module 7 — Automated Editing
+
+Production-ready edits.
+
 - **Editing automation:** smart cuts, transition selection, motion effects, auto
   zooms, dynamic pacing.
 - **Caption system:** speech-to-text, auto captions, animated captions, brand
   styling.
-- **Audio intelligence:** noise reduction, audio cleanup, loudness
-  normalization, music synchronization.
+- **Audio intelligence:** noise reduction, audio cleanup, loudness normalization,
+  music synchronization.
 
-### Module 8 — Brand Consistency Engine
-All media outputs (image **and** video) must respect brand colors, typography,
-logo placement, design system, and visual identity — consistently.
+_Suggested stack (later): Whisper (STT + word timings), animated-caption renderer
+(reuse the kinetic-typography Puppeteer engine Flux already has), ffmpeg
+loudnorm/afftdn, beat-detection for music sync._
 
 ---
 
-## Architecture direction
+## Module 8 — Brand Consistency Engine
 
-**Early versions:** prefer **free API tiers**, **open-source models**, and
-**self-hosted media processing** where practical.
+All media outputs (images **and** video) respect: brand colors, typography, logo
+placement, design system, visual identity. This is the connective tissue across
+every module above — the same brand DNA Flux already stores, applied to media
+treatment, grading, overlays, and logo lockups.
+
+---
+
+## Architecture Direction
+
+**Early versions:** free API tiers where useful, open-source models where
+possible, self-hosted media processing where practical.
 
 **Long-term:** reduce dependency on third-party services and **own the critical
-media-processing infrastructure**.
+media-processing infrastructure.**
 
-**Split of responsibility (non-negotiable):**
-- AI (LLM + vision models, routed through the existing free-tier provider plane)
-  = creative director / decisions.
-- Deterministic pipelines = execution (enhancement, rendering, editing, grading,
-  export).
+- AI = creative director + decision-maker (chooses, ranks, sequences, art-directs).
+- Deterministic systems = execute enhancement, rendering, editing, grading, export.
+- Everything reproducible, debuggable, and inspectable (EDLs, LUTs, crop
+  keyframes, quality scores stored as data).
 
----
-
-## How it slots into today's Flux (for the future implementer)
-
-This module is an **extension of systems that already exist** — not a rewrite:
-
-| Future module | Builds on what exists today |
-| ------------- | --------------------------- |
-| 1 — Media Intelligence | New `src/modules/media-intelligence/`. Route vision calls through the existing `src/ai/` provider plane (Cloudflare Workers AI / Gemini / HuggingFace vision, free tiers). Persist analysis alongside the **asset library** (`modules/assets`) — extend `generated_assets` or add an `asset_analysis` table. Quality scores via deterministic CV (sharp, ffmpeg metrics) + model scoring. |
-| 2 — Image Enhancement | Deterministic pipeline using **sharp** (already a dep) + self-hosted upscalers (Real-ESRGAN). Color grading via LUTs. Brand grading reuses the **brand DNA system** (`modules/brand/dnaExtractor`). |
-| 3 — Background Intelligence | Ties into the **render composer** + **40 style modes** + **brand system**. Saliency/subject detection for smart crop; readability overlays already exist in the render/motion layers. |
-| 4–7 — Video Studio / Story / Enhancement / Editing | **Extends the motion engine** (`src/modules/motion/` — the zero-cost ffmpeg pipeline just shipped). Clip scoring via ffmpeg scene/quality metrics; captions via self-hosted **whisper.cpp** (free STT); editing automation via ffmpeg filtergraphs. The motion composer is the foundation these build on. |
-| 8 — Brand Consistency | Extends the existing **brand DNA** + **style modes** so a single brand identity governs both image and video outputs. |
-
-**Provider strategy** stays identical to the platform's existing ethos: free
-tiers first, multi-key rotation, quota-aware routing, self-hosted fallback,
-aggressive caching — all already implemented in `src/ai/`.
+**Phasing suggestion (when the time comes):** Intelligence/scoring (M1) → Image
+enhancement + background intelligence (M2–M3) → Video understanding + clip
+scoring (M4) → Story assembly + render (M5) → Video enhancement + editing +
+captions (M6–M7), with the Brand Consistency Engine (M8) woven through from day
+one.
 
 ---
 
-## Prerequisites — implement ONLY after these are production-stable
+## Important
 
-1. Core content + rendering engine — **done**.
-2. Motion / cinematic reels engine — **done** (`src/modules/motion/`).
-3. Brand kit + brand DNA — **done / iterating**.
-4. Asset library — **partial** → finish first.
-5. Analytics + intelligence — **partial** → finish first.
-6. Platform hardening (rate-limiting/abuse-prevention, topic intelligence depth)
-   — **open** → close first.
-
-Only once the above are complete and stable should the **AI Media Intelligence
-Studio** be picked up — likely as a new top-level capability ("Studio" mode)
-alongside the existing Creator / Campaign / Motion / Strategy / Analytics modes.
-
----
-
-_Preserved 2026-06-04 as the long-term Flux vision. Do not implement until the
-core platform is complete and production-stable._
+This is a **future roadmap module only. Do not implement now. Do not divert
+current development priorities.** Preserve this architecture and vision for future
+implementation after the core Flux platform is fully completed and
+production-stable.

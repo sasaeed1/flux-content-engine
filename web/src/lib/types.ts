@@ -138,6 +138,47 @@ export interface FluxSettings {
   notifications: { onPublish: boolean; onFailure: boolean };
 }
 
+// ----- multi-platform publishing -----
+export type SocialPlatform = 'instagram' | 'linkedin' | 'tiktok';
+
+export interface PlatformConnectField {
+  key: string;
+  label: string;
+  placeholder?: string;
+  secret?: boolean;
+  required?: boolean;
+  help?: string;
+}
+
+export interface PlatformDescriptor {
+  platform: SocialPlatform;
+  name: string;
+  tagline: string;
+  supports: { carousel: boolean; image: boolean; video: boolean };
+  appConfigured: boolean;
+  connectFields: PlatformConnectField[];
+  docsHref?: string;
+  accent: string;
+}
+
+export interface SocialConnectionPublic {
+  id: string;
+  platform: SocialPlatform;
+  displayName: string | null;
+  externalId: string | null;
+  status: 'connected' | 'expired' | 'error' | 'disconnected';
+  isDefault: boolean;
+}
+
+export interface PublishOutcome {
+  platform: SocialPlatform;
+  connectionId: string;
+  ok: boolean;
+  externalPostId?: string;
+  permalink?: string;
+  error?: string;
+}
+
 export interface OrgOverview {
   organization_id: string;
   name: string;

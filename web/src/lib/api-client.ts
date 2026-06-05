@@ -16,7 +16,10 @@ import type {
   Organization,
   OrgOverview,
   PipelineRun,
+  PlatformDescriptor,
+  PublishOutcome,
   ReelRow,
+  SocialConnectionPublic,
   Template,
   ThemePreset,
 } from './types';
@@ -307,6 +310,24 @@ export const api = {
       method: 'PATCH',
       json: patch,
     }),
+
+  // ── multi-platform publishing ─────────────────────────────────────────
+  connections: () =>
+    engineFetch<{ platforms: PlatformDescriptor[]; connections: SocialConnectionPublic[] }>(
+      '/api/tenant/connections',
+    ),
+  connectChannel: (platform: string, fields: Record<string, string>) =>
+    engineFetch<{ connection: SocialConnectionPublic }>('/api/tenant/connections', {
+      method: 'POST',
+      json: { platform, fields },
+    }),
+  disconnectChannel: (id: string) =>
+    engineFetch<{ ok: true }>(`/api/tenant/connections/${id}`, { method: 'DELETE' }),
+  publishCarouselToChannels: (carouselId: string, connectionIds: string[]) =>
+    engineFetch<{ results: PublishOutcome[] }>(
+      `/api/tenant/carousels/${carouselId}/publish-to`,
+      { method: 'POST', json: { connectionIds } },
+    ),
 
   // ── motion / reels ────────────────────────────────────────────────────
   reels: {

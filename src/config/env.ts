@@ -127,6 +127,13 @@ const schema = z.object({
   // ----- instagram -----
   IG_GRAPH_API_VERSION: z.string().default('v21.0'),
 
+  // ----- multi-platform publishing (optional; OAuth one-click is gated on these,
+  //        but manual-token connect + publishing work without them) -----
+  LINKEDIN_CLIENT_ID: z.string().default(''),
+  LINKEDIN_CLIENT_SECRET: z.string().default(''),
+  TIKTOK_CLIENT_KEY: z.string().default(''),
+  TIKTOK_CLIENT_SECRET: z.string().default(''),
+
   // ----- wappflow integration -----
   WAPPFLOW_WEBHOOK_URL: z.string().default(''),
   WAPPFLOW_WEBHOOK_SECRET: z.string().default(''),

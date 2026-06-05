@@ -28,6 +28,25 @@ export async function disconnectInstagramAction(id: string) {
   return res;
 }
 
+// ----- multi-platform publishing -----
+export async function connectChannelAction(platform: string, fields: Record<string, string>) {
+  const res = await api.connectChannel(platform, fields);
+  revalidatePath('/settings');
+  return res;
+}
+
+export async function disconnectChannelAction(id: string) {
+  const res = await api.disconnectChannel(id);
+  revalidatePath('/settings');
+  return res;
+}
+
+export async function publishToChannelsAction(carouselId: string, connectionIds: string[]) {
+  const res = await api.publishCarouselToChannels(carouselId, connectionIds);
+  revalidatePath('/library');
+  return res;
+}
+
 export async function uploadBrandAssetAction(body: {
   filename: string;
   contentType: string;

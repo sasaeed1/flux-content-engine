@@ -10,6 +10,7 @@ import sso from './sso.routes';
 import intelligence from './intelligence.routes';
 import reels from './reels.routes';
 import settings from './settings.routes';
+import social from './social.routes';
 
 const router = Router();
 
@@ -29,6 +30,7 @@ api.use(edit);
 api.use(intelligence);
 api.use(reels);
 api.use(settings);
+api.use(social);
 api.use(ops);
 router.use('/api', api);
 
