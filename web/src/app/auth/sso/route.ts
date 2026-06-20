@@ -7,6 +7,7 @@
  */
 import { NextRequest, NextResponse } from 'next/server';
 import { COOKIE_ORG, COOKIE_API_KEY } from '@/lib/session';
+import { FLUX_PARKED } from '@/lib/parked';
 
 const ENGINE_URL = process.env.CONTENT_ENGINE_URL ?? 'http://localhost:8090';
 
@@ -31,6 +32,12 @@ function publicUrl(req: NextRequest, path: string): URL {
 }
 
 export async function GET(req: NextRequest) {
+  // Flux is parked — refuse all SSO sign-ins (the only working way in) and send
+  // the visitor to /login, which shows the "coming soon" notice.
+  if (FLUX_PARKED) {
+    return NextResponse.redirect(publicUrl(req, '/login'));
+  }
+
   const url = new URL(req.url);
   const token = url.searchParams.get('token');
   const redirectPath = url.searchParams.get('redirect') ?? '/dashboard';

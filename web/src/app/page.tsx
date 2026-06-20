@@ -28,6 +28,42 @@ import { GradientText } from '@/components/flux/gradient-text';
 import { Reveal, Counter } from '@/components/flux/reveal';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { FLUX_PARKED } from '@/lib/parked';
+import type { ReactNode } from 'react';
+
+/**
+ * Sign-in / sign-up CTA. While Flux is parked it renders disabled with a
+ * "Coming soon" tag instead of linking to /login or /signup.
+ */
+function AuthCta({
+  href,
+  children,
+  variant = 'primary',
+  size = 'lg',
+  className,
+}: {
+  href: string;
+  children: ReactNode;
+  variant?: 'primary' | 'outline' | 'ghost' | 'secondary';
+  size?: 'sm' | 'lg' | 'default';
+  className?: string;
+}) {
+  if (FLUX_PARKED) {
+    return (
+      <Button variant={variant} size={size} disabled className={className}>
+        {children}
+        <Badge variant="outline" className="ml-1.5 normal-case tracking-normal">
+          Coming soon
+        </Badge>
+      </Button>
+    );
+  }
+  return (
+    <Button variant={variant} size={size} asChild className={className}>
+      <Link href={href}>{children}</Link>
+    </Button>
+  );
+}
 
 // Three SMB-anchored value props — leans into operational leverage, not AI jargon.
 const features = [
@@ -209,15 +245,13 @@ export default function HomePage() {
           </Link>
         </nav>
         <div className="flex items-center gap-2">
-          <Button variant="ghost" size="sm" asChild className="hidden sm:inline-flex">
-            <Link href="/login">Sign in</Link>
-          </Button>
-          <Button size="sm" variant="primary" asChild>
-            <Link href="/signup">
-              Start free
-              <ArrowRight className="h-3.5 w-3.5" />
-            </Link>
-          </Button>
+          <AuthCta href="/login" variant="ghost" size="sm" className="hidden sm:inline-flex">
+            Sign in
+          </AuthCta>
+          <AuthCta href="/signup" variant="primary" size="sm">
+            Start free
+            <ArrowRight className="h-3.5 w-3.5" />
+          </AuthCta>
         </div>
       </header>
 
@@ -237,11 +271,9 @@ export default function HomePage() {
           designs, captions, and queues — every post on-brand, every time.
         </p>
         <div className="mt-9 flex flex-wrap items-center justify-center gap-3">
-          <Button size="lg" variant="primary" asChild>
-            <Link href="/signup">
-              Start free <ArrowRight className="h-4 w-4" />
-            </Link>
-          </Button>
+          <AuthCta href="/signup" variant="primary" size="lg">
+            Start free <ArrowRight className="h-4 w-4" />
+          </AuthCta>
           <Button size="lg" variant="outline" asChild>
             <a href="#pricing">See pricing</a>
           </Button>
@@ -513,16 +545,14 @@ export default function HomePage() {
                 )}
               </div>
 
-              <Button
-                asChild
+              <AuthCta
+                href={t.ctaHref}
                 variant={t.popular ? 'primary' : 'outline'}
                 className="mt-6 w-full justify-center"
                 size="lg"
               >
-                <Link href={t.ctaHref}>
-                  {t.cta} <ArrowRight className="h-4 w-4" />
-                </Link>
-              </Button>
+                {t.cta} <ArrowRight className="h-4 w-4" />
+              </AuthCta>
 
               <ul className="mt-7 space-y-2.5">
                 {t.features.map((f) => (
@@ -635,11 +665,9 @@ export default function HomePage() {
             time.
           </p>
           <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
-            <Button size="lg" variant="primary" asChild>
-              <Link href="/signup">
-                Start free <ArrowRight className="h-4 w-4" />
-              </Link>
-            </Button>
+            <AuthCta href="/signup" variant="primary" size="lg">
+              Start free <ArrowRight className="h-4 w-4" />
+            </AuthCta>
             <Button size="lg" variant="outline" asChild>
               <a
                 href="https://wappflow.remoteops.co"

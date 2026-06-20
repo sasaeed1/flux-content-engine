@@ -4,6 +4,8 @@ import { AuroraBackground } from '@/components/flux/aurora-bg';
 import { Logo } from '@/components/flux/logo';
 import { Badge } from '@/components/ui/badge';
 import { AuthEmailForm } from '@/components/auth/auth-email-form';
+import { ParkedNotice } from '@/components/auth/parked-notice';
+import { FLUX_PARKED } from '@/lib/parked';
 
 export const metadata = { title: 'Sign in · Flux' };
 
@@ -12,6 +14,7 @@ export default function LoginPage({
 }: {
   searchParams: Promise<{ error?: string; code?: string }>;
 }) {
+  if (FLUX_PARKED) return <ParkedNotice mode="login" />;
   return <LoginInner searchParams={searchParams} />;
 }
 

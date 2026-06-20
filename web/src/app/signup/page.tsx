@@ -4,6 +4,8 @@ import { AuroraBackground } from '@/components/flux/aurora-bg';
 import { Logo } from '@/components/flux/logo';
 import { Badge } from '@/components/ui/badge';
 import { AuthEmailForm } from '@/components/auth/auth-email-form';
+import { ParkedNotice } from '@/components/auth/parked-notice';
+import { FLUX_PARKED } from '@/lib/parked';
 
 export const metadata = { title: 'Get started · Flux' };
 
@@ -19,6 +21,7 @@ export default function SignupPage({
 }: {
   searchParams: Promise<{ plan?: string }>;
 }) {
+  if (FLUX_PARKED) return <ParkedNotice mode="signup" />;
   return <SignupInner searchParams={searchParams} />;
 }
 
