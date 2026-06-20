@@ -3,7 +3,11 @@
 #  Services:
 #    app  -> Node/TypeScript content engine API + workers (engine, port 8090)
 #    web  -> Next.js 15 Flux dashboard (port 3010 on host -> 3000 in container)
-#    n8n  -> orchestration plane (port 5679)
+#    n8n  -> orchestration plane (port 5679) — PARKED 2026-06-20 with Flux:
+#           commented out below to free server RAM + image disk. n8n only fired
+#           the daily per-org content trigger, which is moot while Flux auth is
+#           disabled. Re-enable by uncommenting (workflow def kept in
+#           workflows/n8n-content-factory.json).
 #  Supabase is a managed cloud service.
 #  WappFlow runs in its own compose at its own port; this is a sibling.
 # ============================================================
@@ -49,34 +53,37 @@ services:
     networks:
       - content-engine
 
-  n8n:
-    image: n8nio/n8n:latest
-    container_name: content-engine-n8n
-    restart: unless-stopped
-    ports:
-      - "127.0.0.1:5679:5678" # 5679 on host to avoid collisions with WappFlow's n8n
-    environment:
-      - N8N_HOST=${N8N_HOST:-localhost}
-      - N8N_PORT=5678
-      - N8N_PROTOCOL=${N8N_PROTOCOL:-http}
-      - WEBHOOK_URL=${N8N_WEBHOOK_URL:-http://localhost:5679/}
-      - GENERIC_TIMEZONE=${TZ:-UTC}
-      - N8N_BASIC_AUTH_ACTIVE=true
-      - N8N_BASIC_AUTH_USER=${N8N_BASIC_AUTH_USER:-admin}
-      - N8N_BASIC_AUTH_PASSWORD=${N8N_BASIC_AUTH_PASSWORD:-change-me}
-      - N8N_RUNNERS_ENABLED=true
-      - CONTENT_ENGINE_URL=http://app:8090
-      - CONTENT_ENGINE_API_KEY=${INTERNAL_API_KEY}
-    volumes:
-      - n8n_data:/home/node/.n8n
-    depends_on:
-      - app
-    networks:
-      - content-engine
+  # ── PARKED 2026-06-20 with Flux — re-enable by uncommenting this service
+  #    AND the `volumes: n8n_data` block below. Nothing depends on n8n (it
+  #    depends on `app`, not vice-versa), so app + web run fine without it.
+  # n8n:
+  #   image: n8nio/n8n:latest
+  #   container_name: content-engine-n8n
+  #   restart: unless-stopped
+  #   ports:
+  #     - "127.0.0.1:5679:5678" # 5679 on host to avoid collisions with WappFlow's n8n
+  #   environment:
+  #     - N8N_HOST=${N8N_HOST:-localhost}
+  #     - N8N_PORT=5678
+  #     - N8N_PROTOCOL=${N8N_PROTOCOL:-http}
+  #     - WEBHOOK_URL=${N8N_WEBHOOK_URL:-http://localhost:5679/}
+  #     - GENERIC_TIMEZONE=${TZ:-UTC}
+  #     - N8N_BASIC_AUTH_ACTIVE=true
+  #     - N8N_BASIC_AUTH_USER=${N8N_BASIC_AUTH_USER:-admin}
+  #     - N8N_BASIC_AUTH_PASSWORD=${N8N_BASIC_AUTH_PASSWORD:-change-me}
+  #     - N8N_RUNNERS_ENABLED=true
+  #     - CONTENT_ENGINE_URL=http://app:8090
+  #     - CONTENT_ENGINE_API_KEY=${INTERNAL_API_KEY}
+  #   volumes:
+  #     - n8n_data:/home/node/.n8n
+  #   depends_on:
+  #     - app
+  #   networks:
+  #     - content-engine
 
 networks:
   content-engine:
     driver: bridge
 
-volumes:
-  n8n_data:
+# volumes:           # PARKED with n8n (above) — uncomment alongside the n8n service
+#   n8n_data:
